@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -27,11 +27,12 @@ using dnSpy.Text.WPF;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 
 namespace dnSpy.Text.Editor {
 	sealed class TextSelectionLayer {
 		public bool IsActive {
-			get { return isActive; }
+			get => isActive;
 			set {
 				if (isActive != value) {
 					isActive = value;
@@ -46,25 +47,19 @@ namespace dnSpy.Text.Editor {
 		readonly IEditorFormatMap editorFormatMap;
 
 		public TextSelectionLayer(TextSelection textSelection, IAdornmentLayer layer, IEditorFormatMap editorFormatMap) {
-			if (textSelection == null)
-				throw new ArgumentNullException(nameof(textSelection));
-			if (layer == null)
-				throw new ArgumentNullException(nameof(layer));
-			if (editorFormatMap == null)
-				throw new ArgumentNullException(nameof(editorFormatMap));
 			markerElementRemovedCallBack = (tag, element) => OnMarkerElementRemoved();
-			this.textSelection = textSelection;
-			this.layer = layer;
-			this.editorFormatMap = editorFormatMap;
+			this.textSelection = textSelection ?? throw new ArgumentNullException(nameof(textSelection));
+			this.layer = layer ?? throw new ArgumentNullException(nameof(layer));
+			this.editorFormatMap = editorFormatMap ?? throw new ArgumentNullException(nameof(editorFormatMap));
 			textSelection.TextView.Options.OptionChanged += Options_OptionChanged;
 			textSelection.SelectionChanged += TextSelection_SelectionChanged;
 			textSelection.TextView.LayoutChanged += TextView_LayoutChanged;
 			editorFormatMap.FormatMappingChanged += EditorFormatMap_FormatMappingChanged;
-			UpdateUseReducedOpacityForHighContrastOption();
 			UpdateBackgroundBrush();
 		}
 
 		void UpdateBackgroundBrush() {
+			UpdateIsInContrastModeOption();
 			var newBackgroundBrush = GetBackgroundBrush();
 			if (BrushComparer.Equals(newBackgroundBrush, backgroundBrush))
 				return;
@@ -81,13 +76,15 @@ namespace dnSpy.Text.Editor {
 		}
 
 		void Options_OptionChanged(object sender, EditorOptionChangedEventArgs e) {
-			if (e.OptionId == DefaultWpfViewOptions.UseReducedOpacityForHighContrastOptionName)
-				UpdateUseReducedOpacityForHighContrastOption();
+			if (e.OptionId == DefaultTextViewHostOptions.IsInContrastModeName)
+				UpdateIsInContrastModeOption();
 		}
 
-		void UpdateUseReducedOpacityForHighContrastOption() {
-			bool reducedOpacity = textSelection.TextView.Options.GetOptionValue(DefaultWpfViewOptions.UseReducedOpacityForHighContrastOptionId);
-			layer.Opacity = reducedOpacity ? 0.4 : 1;
+		void UpdateIsInContrastModeOption() {
+			bool isInContrastMode = textSelection.TextView.Options.IsInContrastMode();
+			var newValue = isInContrastMode ? 1 : 0.4;
+			if (layer.Opacity != newValue)
+				layer.Opacity = newValue;
 		}
 
 		void EditorFormatMap_FormatMappingChanged(object sender, FormatItemsEventArgs e) {
@@ -129,14 +126,14 @@ namespace dnSpy.Text.Editor {
 				var info = CreateStreamSelection();
 				if (info == null)
 					return;
-				CreateMarkerElement(info.Value.Key, info.Value.Value);
+				CreateMarkerElement(info.Value.span, info.Value.geometry);
 			}
 			else {
 				Debug.Assert(textSelection.Mode == TextSelectionMode.Box);
 				var info = CreateBoxSelection();
 				if (info == null)
 					return;
-				CreateMarkerElement(info.Value.Key, info.Value.Value);
+				CreateMarkerElement(info.Value.span, info.Value.geometry);
 			}
 		}
 
@@ -152,7 +149,7 @@ namespace dnSpy.Text.Editor {
 
 		void OnMarkerElementRemoved() => markerElement = null;
 
-		KeyValuePair<SnapshotSpan, Geometry>? CreateStreamSelection() {
+		(SnapshotSpan span, Geometry geometry)? CreateStreamSelection() {
 			Debug.Assert(!textSelection.IsEmpty && textSelection.Mode == TextSelectionMode.Stream);
 			bool isMultiLine = MarkerHelper.IsMultiLineSpan(textSelection.TextView, textSelection.StreamSelectionSpan.SnapshotSpan);
 			var span = textSelection.StreamSelectionSpan.Overlap(new VirtualSnapshotSpan(textSelection.TextView.TextViewLines.FormattedSpan));
@@ -161,10 +158,10 @@ namespace dnSpy.Text.Editor {
 			var geo = MarkerHelper.CreateGeometry(textSelection.TextView, span.Value, false, isMultiLine);
 			if (geo == null)
 				return null;
-			return new KeyValuePair<SnapshotSpan, Geometry>(span.Value.SnapshotSpan, geo);
+			return (span.Value.SnapshotSpan, geo);
 		}
 
-		KeyValuePair<SnapshotSpan, Geometry>? CreateBoxSelection() {
+		(SnapshotSpan span, Geometry geometry)? CreateBoxSelection() {
 			Debug.Assert(!textSelection.IsEmpty && textSelection.Mode == TextSelectionMode.Box);
 			var allSpans = textSelection.VirtualSelectedSpans;
 			var spans = GetVisibleBoxSpans(allSpans);
@@ -174,7 +171,7 @@ namespace dnSpy.Text.Editor {
 			if (geo == null)
 				return null;
 			var fullSpan = new SnapshotSpan(spans[0].SnapshotSpan.Start, spans[spans.Count - 1].SnapshotSpan.End);
-			return new KeyValuePair<SnapshotSpan, Geometry>(fullSpan, geo);
+			return (fullSpan, geo);
 		}
 
 		List<VirtualSnapshotSpan> GetVisibleBoxSpans(IList<VirtualSnapshotSpan> allSpans) {
@@ -194,7 +191,7 @@ namespace dnSpy.Text.Editor {
 			readonly Geometry geometry;
 
 			public Brush BackgroundBrush {
-				get { return backgroundBrush; }
+				get => backgroundBrush;
 				set {
 					if (value == null)
 						throw new ArgumentNullException(nameof(value));
@@ -207,7 +204,7 @@ namespace dnSpy.Text.Editor {
 			Brush backgroundBrush;
 
 			public Pen Pen {
-				get { return pen; }
+				get => pen;
 				set {
 					if (pen != value) {
 						pen = value;
@@ -217,11 +214,7 @@ namespace dnSpy.Text.Editor {
 			}
 			Pen pen;
 
-			public MarkerElement(Geometry geometry) {
-				if (geometry == null)
-					throw new ArgumentNullException(nameof(geometry));
-				this.geometry = geometry;
-			}
+			public MarkerElement(Geometry geometry) => this.geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
 
 			protected override void OnRender(DrawingContext drawingContext) {
 				base.OnRender(drawingContext);

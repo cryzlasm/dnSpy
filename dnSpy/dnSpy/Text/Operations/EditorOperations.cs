@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -86,28 +86,21 @@ namespace dnSpy.Text.Operations {
 		}
 		ITextStructureNavigator textStructureNavigator;
 
-		void OnContentTypeChanged(object sender, TextDataModelContentTypeChangedEventArgs e) {
+		void OnContentTypeChanged(object sender, TextDataModelContentTypeChangedEventArgs e) =>
 			// The TextStructureNavigator prop checks it for null and re-initializes it. The reason that we
 			// don't just call GetTextStructureNavigator() now is that the ITextStructureNavigatorSelectorService
 			// instance will remove the cached navigator instance from its ContentTypeChanged handler. If this
 			// method is called before its ContentTypeChanged handler, we'll get the old cached nav instance.
 			// We can't depend on always being called after it so re-initialize this field lazily.
 			textStructureNavigator = null;
-		}
 
 		public EditorOperations(ITextView textView, ITextStructureNavigatorSelectorService textStructureNavigatorSelectorService, ISmartIndentationService smartIndentationService, IHtmlBuilderService htmlBuilderService) {
-			if (textView == null)
-				throw new ArgumentNullException(nameof(textView));
-			if (textStructureNavigatorSelectorService == null)
-				throw new ArgumentNullException(nameof(textStructureNavigatorSelectorService));
-			if (htmlBuilderService == null)
-				throw new ArgumentNullException(nameof(htmlBuilderService));
-			TextView = textView;
+			TextView = textView ?? throw new ArgumentNullException(nameof(textView));
 			TextView.Closed += TextView_Closed;
 			TextView.TextViewModel.DataModel.ContentTypeChanged += OnContentTypeChanged;
-			this.textStructureNavigatorSelectorService = textStructureNavigatorSelectorService;
+			this.textStructureNavigatorSelectorService = textStructureNavigatorSelectorService ?? throw new ArgumentNullException(nameof(textStructureNavigatorSelectorService));
 			this.smartIndentationService = smartIndentationService;
-			this.htmlBuilderService = htmlBuilderService;
+			this.htmlBuilderService = htmlBuilderService ?? throw new ArgumentNullException(nameof(htmlBuilderService));
 		}
 
 		void TextView_Closed(object sender, EventArgs e) {
@@ -116,7 +109,7 @@ namespace dnSpy.Text.Operations {
 			EditorOperationsFactoryService.RemoveFromProperties(this);
 		}
 
-		struct SavedCaretSelection {
+		readonly struct SavedCaretSelection {
 			readonly EditorOperations editorOperations;
 			public VirtualSnapshotPoint AnchorPoint { get; }
 			public VirtualSnapshotPoint ActivePoint { get; }
@@ -264,13 +257,9 @@ namespace dnSpy.Text.Operations {
 			}
 		}
 
-		public bool ConvertSpacesToTabs() {
-			return true;//TODO:
-		}
+		public bool ConvertSpacesToTabs() => true;//TODO:
 
-		public bool ConvertTabsToSpaces() {
-			return true;//TODO:
-		}
+		public bool ConvertTabsToSpaces() => true;//TODO:
 
 		const string VS_COPY_FULL_LINE_DATA_FORMAT = "VisualStudioEditorOperationsLineCutCopyClipboardTag";
 		const string VS_COPY_BOX_DATA_FORMAT = "MSDEVColumnSelect";
@@ -339,8 +328,7 @@ namespace dnSpy.Text.Operations {
 		}
 
 		VirtualSnapshotPoint GetAnchorPositionOrCaretIfNoSelection() {
-			VirtualSnapshotPoint anchorPoint, activePoint;
-			GetSelectionOrCaretIfNoSelection(out anchorPoint, out activePoint);
+			GetSelectionOrCaretIfNoSelection(out var anchorPoint, out var activePoint);
 			return anchorPoint;
 		}
 
@@ -440,7 +428,7 @@ namespace dnSpy.Text.Operations {
 			return Span.FromBounds(start, end);
 		}
 
-		struct DeleteHorizontalWhitespaceInfo {
+		readonly struct DeleteHorizontalWhitespaceInfo {
 			public Span Span { get; }
 			public bool AddSpace { get; }
 			public DeleteHorizontalWhitespaceInfo(Span span, bool addSpace) {
@@ -780,17 +768,11 @@ namespace dnSpy.Text.Operations {
 			ViewScroller.EnsureSpanVisible(span);
 		}
 
-		public bool DecreaseLineIndent() {
-			return true;//TODO:
-		}
+		public bool DecreaseLineIndent() => true;//TODO:
 
-		public bool IncreaseLineIndent() {
-			return true;//TODO:
-		}
+		public bool IncreaseLineIndent() => true;//TODO:
 
-		public bool Unindent() {
-			return true;//TODO:
-		}
+		public bool Unindent() => true;//TODO:
 
 		public bool Indent() {
 			if (Selection.IsEmpty)
@@ -983,7 +965,10 @@ namespace dnSpy.Text.Operations {
 		public bool InsertFile(string filePath) {
 			if (filePath == null)
 				throw new ArgumentNullException(nameof(filePath));
-			return InsertText(File.ReadAllText(filePath), false, false);
+			const bool isProvisional = false;
+			const bool overwriteMode = false;
+			const bool isFullLineData = false;
+			return InsertText(File.ReadAllText(filePath), isProvisional, overwriteMode, isFullLineData);
 		}
 
 		public bool InsertProvisionalText(string text) => InsertText(text, true);
@@ -994,27 +979,36 @@ namespace dnSpy.Text.Operations {
 				overwriteMode = false;
 			if (Caret.InVirtualSpace)
 				overwriteMode = false;
-			return InsertText(text, isProvisional, overwriteMode);
+			const bool isFullLineData = false;
+			return InsertText(text, isProvisional, overwriteMode, isFullLineData);
 		}
 
-		public bool InsertFinalNewLine() {
-			return false;//TODO:
-		}
+		public bool InsertFinalNewLine() => false;//TODO:
 
 		public bool Paste() {
 			string text;
+			bool isFullLineData;
 			try {
-				text = Clipboard.GetText();
+				var dataObj = Clipboard.GetDataObject();
+				if (dataObj == null)
+					return false;
+				text = (string)dataObj.GetData(DataFormats.UnicodeText);
+				var fullLineDataObj = dataObj.GetData(VS_COPY_FULL_LINE_DATA_FORMAT);
+				isFullLineData = fullLineDataObj is bool && (bool)fullLineDataObj;
 			}
 			catch (ExternalException) {
 				return false;
 			}
 			if (text == null)
 				return false;
-			return InsertText(text, false, false);
+			const bool isProvisional = false;
+			const bool overwriteMode = false;
+			if (!Selection.IsEmpty)
+				isFullLineData = false;
+			return InsertText(text, isProvisional, overwriteMode, isFullLineData);
 		}
 
-		bool InsertText(string text, bool isProvisional, bool overwriteMode) {
+		bool InsertText(string text, bool isProvisional, bool overwriteMode, bool isFullLineData) {
 			var spans = Selection.SelectedSpans;
 			Selection.Clear();
 			var caretPos = Caret.Position;
@@ -1026,9 +1020,16 @@ namespace dnSpy.Text.Operations {
 			var newPos = caretPos.VirtualBufferPosition.TranslateTo(Snapshot, PointTrackingMode.Negative);
 
 			if (!overwriteMode) {
-				var spaces = GetWhitespaceForVirtualSpace(newPos);
-				TextBuffer.Insert(newPos.Position, spaces + text);
-				newPos = new VirtualSnapshotPoint(newPos.Position.TranslateTo(Snapshot, PointTrackingMode.Positive));
+				if (isFullLineData) {
+					var line = newPos.Position.GetContainingLine();
+					TextBuffer.Insert(line.Start, text);
+					newPos = new VirtualSnapshotPoint(newPos.Position.TranslateTo(Snapshot, PointTrackingMode.Positive));
+				}
+				else {
+					var spaces = GetWhitespaceForVirtualSpace(newPos);
+					TextBuffer.Insert(newPos.Position, spaces + text);
+					newPos = new VirtualSnapshotPoint(newPos.Position.TranslateTo(Snapshot, PointTrackingMode.Positive));
+				}
 			}
 			else {
 				Debug.Assert(!newPos.IsInVirtualSpace);
@@ -1037,6 +1038,8 @@ namespace dnSpy.Text.Operations {
 				int columnsLeft = line.Length - column;
 				int replaceLength = Math.Min(columnsLeft, text.Length);
 				TextBuffer.Replace(new Span(newPos.Position.Position, replaceLength), text);
+				if (replaceLength != 0)
+					newPos = new VirtualSnapshotPoint(newPos.Position + replaceLength);
 				newPos = new VirtualSnapshotPoint(newPos.Position.TranslateTo(Snapshot, PointTrackingMode.Positive));
 			}
 
@@ -1145,13 +1148,9 @@ namespace dnSpy.Text.Operations {
 				Selection.Clear();
 		}
 
-		public bool MoveSelectedLinesDown() {
-			return true;//TODO:
-		}
+		public bool MoveSelectedLinesDown() => true;//TODO:
 
-		public bool MoveSelectedLinesUp() {
-			return true;//TODO:
-		}
+		public bool MoveSelectedLinesUp() => true;//TODO:
 
 		ITextViewLine GetBottomFullyVisibleLine() =>
 			TextView.TextViewLines.LastOrDefault(a => a.VisibilityState == VisibilityState.FullyVisible) ??
@@ -1412,9 +1411,7 @@ namespace dnSpy.Text.Operations {
 				Selection.Clear();
 		}
 
-		public bool NormalizeLineEndings(string replacement) {
-			return true;//TODO:
-		}
+		public bool NormalizeLineEndings(string replacement) => true;//TODO:
 
 		public bool OpenLineAbove() {
 			Selection.Clear();
@@ -1495,17 +1492,11 @@ namespace dnSpy.Text.Operations {
 				Selection.Clear();
 		}
 
-		public int ReplaceAllMatches(string searchText, string replaceText, bool matchCase, bool matchWholeWord, bool useRegularExpressions) {
-			return 0;//TODO:
-		}
+		public int ReplaceAllMatches(string searchText, string replaceText, bool matchCase, bool matchWholeWord, bool useRegularExpressions) => 0;//TODO:
 
-		public bool ReplaceSelection(string text) {
-			return true;//TODO:
-		}
+		public bool ReplaceSelection(string text) => true;//TODO:
 
-		public bool ReplaceText(Span replaceSpan, string text) {
-			return true;//TODO:
-		}
+		public bool ReplaceText(Span replaceSpan, string text) => true;//TODO:
 
 		public void ResetSelection() => Selection.Clear();
 
@@ -1691,33 +1682,19 @@ namespace dnSpy.Text.Operations {
 			Caret.EnsureVisible();
 		}
 
-		public bool Tabify() {
-			return true;//TODO:
-		}
+		public bool Tabify() => true;//TODO:
 
-		public bool ToggleCase() {
-			return true;//TODO:
-		}
+		public bool ToggleCase() => true;//TODO:
 
-		public bool TransposeCharacter() {
-			return true;//TODO:
-		}
+		public bool TransposeCharacter() => true;//TODO:
 
-		public bool TransposeLine() {
-			return true;//TODO:
-		}
+		public bool TransposeLine() => true;//TODO:
 
-		public bool TransposeWord() {
-			return true;//TODO:
-		}
+		public bool TransposeWord() => true;//TODO:
 
-		public bool TrimTrailingWhiteSpace() {
-			return false;//TODO:
-		}
+		public bool TrimTrailingWhiteSpace() => false;//TODO:
 
-		public bool Untabify() {
-			return true;//TODO:
-		}
+		public bool Untabify() => true;//TODO:
 
 		IWpfTextView GetZoomableView() {
 			if (!Roles.Contains(PredefinedTextViewRoles.Zoomable))

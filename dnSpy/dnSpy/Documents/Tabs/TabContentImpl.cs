@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -27,6 +27,7 @@ using System.Windows;
 using dnSpy.Contracts.Controls;
 using dnSpy.Contracts.Documents.Tabs;
 using dnSpy.Contracts.Documents.TreeView;
+using dnSpy.Contracts.ETW;
 using dnSpy.Contracts.MVVM;
 using dnSpy.Contracts.Settings;
 using dnSpy.Contracts.Tabs;
@@ -42,7 +43,7 @@ namespace dnSpy.Documents.Tabs {
 		public bool IsActiveTab => DocumentTabService.ActiveTab == this;
 
 		public DocumentTabContent Content {
-			get { return tabHistory.Current; }
+			get => tabHistory.Current;
 			private set {
 				bool saveCurrent = !(tabHistory.Current is NullDocumentTabContent);
 				tabHistory.SetCurrent(value, saveCurrent);
@@ -50,7 +51,7 @@ namespace dnSpy.Documents.Tabs {
 		}
 
 		public DocumentTabUIContext UIContext {
-			get { return uiContext; }
+			get => uiContext;
 			private set {
 				uiContextVersion++;
 				var newValue = value;
@@ -70,7 +71,7 @@ namespace dnSpy.Documents.Tabs {
 		int uiContextVersion;
 
 		public string Title {
-			get { return title; }
+			get => title;
 			set {
 				if (title != value) {
 					title = value;
@@ -81,7 +82,7 @@ namespace dnSpy.Documents.Tabs {
 		string title;
 
 		public object ToolTip {
-			get { return toolTip; }
+			get => toolTip;
 			set {
 				if (!object.Equals(toolTip, value)) {
 					toolTip = value;
@@ -92,7 +93,7 @@ namespace dnSpy.Documents.Tabs {
 		object toolTip;
 
 		public object UIObject {
-			get { return uiObject; }
+			get => uiObject;
 			set {
 				if (uiObject != value) {
 					uiObject = value;
@@ -303,8 +304,8 @@ namespace dnSpy.Documents.Tabs {
 		sealed class AsyncShowContext : IAsyncShowContext {
 			public DocumentTabUIContext UIContext => showContext.UIContext;
 			public bool IsRefresh => showContext.IsRefresh;
-			public object Tag { get { return showContext.Tag; } set { showContext.Tag = value; } }
-			public Action<ShowTabContentEventArgs> OnShown { get { return showContext.OnShown; } set { showContext.OnShown = value; } }
+			public object Tag { get => showContext.Tag; set => showContext.Tag = value; }
+			public Action<ShowTabContentEventArgs> OnShown { get => showContext.OnShown; set => showContext.OnShown = value; }
 			public CancellationToken CancellationToken => asyncWorkerContext.CancellationToken;
 
 			readonly IShowContext showContext;
@@ -330,11 +331,11 @@ namespace dnSpy.Documents.Tabs {
 			Debug.Assert(tabContent.DocumentTab == this);
 
 			UpdateTitleAndToolTip();
+			DnSpyEventSource.Log.ShowDocumentTabContentStart();
 			var showCtx = new ShowContext(cachedUIContext, isRefresh);
 			tabContent.OnShow(showCtx);
 			bool asyncShow = false;
-			var asyncTabContent = tabContent as AsyncDocumentTabContent;
-			if (asyncTabContent != null) {
+			if (tabContent is AsyncDocumentTabContent asyncTabContent) {
 				if (asyncTabContent.NeedAsyncWork(showCtx)) {
 					asyncShow = true;
 					var ctx = new AsyncWorkerContext();
@@ -415,6 +416,7 @@ namespace dnSpy.Documents.Tabs {
 				onShownHandler?.Invoke(e);
 				showCtx.OnShown?.Invoke(e);
 			}
+			DnSpyEventSource.Log.ShowDocumentTabContentStop();
 		}
 
 		void RestoreUIState(object uiState) {
@@ -490,10 +492,9 @@ namespace dnSpy.Documents.Tabs {
 		public void OnSelected() => Content.OnSelected();
 		public void OnUnselected() => Content.OnUnselected();
 
-		internal void OnTabsLoaded() {
+		internal void OnTabsLoaded() =>
 			// Make sure that the tab initializes eg. Language to the language it's using.
 			OnSelected();
-		}
 
 		const string ZOOM_ATTR = "zoom";
 

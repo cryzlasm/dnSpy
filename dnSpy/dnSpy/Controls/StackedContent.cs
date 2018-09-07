@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -59,13 +59,10 @@ namespace dnSpy.Controls {
 	sealed class StackedContentChildImpl : IStackedContentChild {
 		public object UIObject { get; }
 
-		public StackedContentChildImpl(object uiObject) {
-			UIObject = uiObject;
-		}
+		public StackedContentChildImpl(object uiObject) => UIObject = uiObject;
 
 		public static IStackedContentChild GetOrCreate(object uiObjectOwner, object uiObject) {
-			var scc = uiObjectOwner as IStackedContentChild;
-			if (scc != null)
+			if (uiObjectOwner is IStackedContentChild scc)
 				return scc;
 			return new StackedContentChildImpl(uiObject);
 		}
@@ -78,7 +75,7 @@ namespace dnSpy.Controls {
 		public int Count => children.Count;
 
 		public double SplitterLength {
-			get { return splitterLength; }
+			get => splitterLength;
 			set {
 				if (splitterLength != value) {
 					splitterLength = value;
@@ -106,7 +103,7 @@ namespace dnSpy.Controls {
 		readonly List<ChildInfo> children;
 
 		public bool IsHorizontal {
-			get { return isHorizontal; }
+			get => isHorizontal;
 			set {
 				if (isHorizontal != value) {
 					isHorizontal = value;

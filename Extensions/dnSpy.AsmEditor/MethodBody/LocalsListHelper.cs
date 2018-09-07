@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -41,9 +41,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		protected override string RemoveAllMessage => dnSpy_AsmEditor_Resources.Local_Command6;
 
 		public LocalsListHelper(ListView listView, Window ownerWindow)
-			: base(listView) {
-			typeSigCreator = new TypeSigCreator(ownerWindow);
-		}
+			: base(listView) => typeSigCreator = new TypeSigCreator(ownerWindow);
 
 		protected override LocalVM[] GetSelectedItems() => listBox.SelectedItems.Cast<LocalVM>().ToArray();
 
@@ -80,7 +78,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 				output.Write(BoxedTextColor.Text, "\t");
 				output.Write(BoxedTextColor.Text, local.IsPinned ? dnSpy_AsmEditor_Resources.Local_Pinned_Character : string.Empty);
 				output.Write(BoxedTextColor.Text, "\t");
-				output.Write(BoxedTextColor.Text, local.IsCompilerGenerated ? dnSpy_AsmEditor_Resources.Local_CompilerGenerated_Character : string.Empty);
+				output.Write(BoxedTextColor.Text, local.DebuggerHidden ? dnSpy_AsmEditor_Resources.Local_CompilerGenerated_Character : string.Empty);
 				output.Write(BoxedTextColor.Text, "\t");
 				output.Write(BoxedTextColor.Local, local.Name ?? string.Empty);
 				output.Write(BoxedTextColor.Text, "\t");

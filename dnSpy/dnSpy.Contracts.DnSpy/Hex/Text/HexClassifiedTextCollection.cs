@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -39,7 +39,7 @@ namespace dnSpy.Contracts.Hex.Text {
 		/// </summary>
 		/// <param name="index">Index</param>
 		/// <returns></returns>
-		public HexClassifiedText this[int index] => text[index];
+		public ref readonly HexClassifiedText this[int index] => ref text[index];
 
 		/// <summary>
 		/// Constructor
@@ -55,11 +55,7 @@ namespace dnSpy.Contracts.Hex.Text {
 		/// Constructor
 		/// </summary>
 		/// <param name="text">Text</param>
-		public HexClassifiedTextCollection(HexClassifiedText[] text) {
-			if (text == null)
-				throw new ArgumentNullException(nameof(text));
-			this.text = text;
-		}
+		public HexClassifiedTextCollection(HexClassifiedText[] text) => this.text = text ?? throw new ArgumentNullException(nameof(text));
 
 		/// <summary>
 		/// Gets the enumerator

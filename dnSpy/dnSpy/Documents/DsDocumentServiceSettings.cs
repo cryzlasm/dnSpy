@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -32,7 +32,7 @@ namespace dnSpy.Documents {
 		protected virtual void OnModified() { }
 
 		public bool UseMemoryMappedIO {
-			get { return useMemoryMappedIO; }
+			get => useMemoryMappedIO;
 			set {
 				if (useMemoryMappedIO != value) {
 					useMemoryMappedIO = value;
@@ -41,7 +41,7 @@ namespace dnSpy.Documents {
 				}
 			}
 		}
-		bool useMemoryMappedIO = true;
+		bool useMemoryMappedIO = false;
 	}
 
 	[Export, Export(typeof(IDsDocumentServiceSettings))]

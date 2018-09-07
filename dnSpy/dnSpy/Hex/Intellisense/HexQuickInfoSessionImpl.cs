@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -42,9 +42,7 @@ namespace dnSpy.Hex.Intellisense {
 		bool hasInteractiveContent;
 		bool IsStarted { get; set; }
 
-		public override HexBufferSpanSelection ApplicableToSpan {
-			get { return applicableToSpan; }
-		}
+		public override HexBufferSpanSelection ApplicableToSpan => applicableToSpan;
 
 		void SetApplicableToSpan(HexBufferSpanSelection newValue) {
 			if (!applicableToSpan.Equals(newValue)) {
@@ -60,20 +58,14 @@ namespace dnSpy.Hex.Intellisense {
 		HexIntellisensePresenter quickInfoPresenter;
 
 		public HexQuickInfoSessionImpl(HexView hexView, HexCellPosition triggerPoint, bool trackMouse, HexIntellisensePresenterFactoryService intellisensePresenterFactoryService, Lazy<HexQuickInfoSourceProvider, VSUTIL.IOrderable>[] quickInfoSourceProviders) {
-			if (hexView == null)
-				throw new ArgumentNullException(nameof(hexView));
 			if (triggerPoint.IsDefault)
 				throw new ArgumentException();
-			if (intellisensePresenterFactoryService == null)
-				throw new ArgumentNullException(nameof(intellisensePresenterFactoryService));
-			if (quickInfoSourceProviders == null)
-				throw new ArgumentNullException(nameof(quickInfoSourceProviders));
 			QuickInfoContent = new VSLI.BulkObservableCollection<object>();
-			HexView = hexView;
+			HexView = hexView ?? throw new ArgumentNullException(nameof(hexView));
 			TriggerPoint = triggerPoint;
 			TrackMouse = trackMouse;
-			this.intellisensePresenterFactoryService = intellisensePresenterFactoryService;
-			this.quickInfoSourceProviders = quickInfoSourceProviders;
+			this.intellisensePresenterFactoryService = intellisensePresenterFactoryService ?? throw new ArgumentNullException(nameof(intellisensePresenterFactoryService));
+			this.quickInfoSourceProviders = quickInfoSourceProviders ?? throw new ArgumentNullException(nameof(quickInfoSourceProviders));
 			HexView.Closed += HexView_Closed;
 		}
 
@@ -122,8 +114,7 @@ namespace dnSpy.Hex.Intellisense {
 			var newContent = new List<object>();
 			var applicableToSpan = default(HexBufferSpanSelection);
 			foreach (var source in quickInfoSources) {
-				HexBufferSpanSelection applicableToSpanTmp;
-				source.AugmentQuickInfoSession(this, newContent, out applicableToSpanTmp);
+				source.AugmentQuickInfoSession(this, newContent, out var applicableToSpanTmp);
 				if (IsDismissed)
 					return;
 				if (applicableToSpan.IsDefault)
@@ -169,10 +160,9 @@ namespace dnSpy.Hex.Intellisense {
 			DisposeQuickInfoSources();
 		}
 
-		public override bool Match() {
+		public override bool Match() =>
 			// There's nothing to match...
-			return false;
-		}
+			false;
 
 		public override void Collapse() => Dismiss();
 	}

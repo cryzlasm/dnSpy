@@ -27,7 +27,6 @@ using System.Xml.Linq;
 using dnlib.DotNet;
 using dnSpy.BamlDecompiler.Properties;
 using dnSpy.Contracts.Decompiler;
-using dnSpy.Contracts.Text;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.ILAst;
 
@@ -54,7 +53,9 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 			if (type == null)
 				return;
 
-			var wbAsm = new AssemblyNameInfo("WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35").ToAssemblyRef();
+			var wbAsm = ctx.Module.CorLibTypes.AssemblyRef.Version == new Version(2, 0, 0, 0) ?
+				new AssemblyNameInfo("WindowsBase, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35").ToAssemblyRef() :
+				new AssemblyNameInfo("WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35").ToAssemblyRef();
 			var ifaceRef = new TypeRefUser(ctx.Module, "System.Windows.Markup", "IComponentConnector", wbAsm);
 			var iface = ctx.Module.Context.Resolver.ResolveThrow(ifaceRef);
 
@@ -100,8 +101,7 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 			if (connId == null)
 				return;
 
-			Action<XamlContext, XElement> cb;
-			if (!connIds.TryGetValue((int)connId.Id, out cb)) {
+			if (!connIds.TryGetValue((int)connId.Id, out var cb)) {
 				elem.AddBeforeSelf(new XComment(string.Format(dnSpy_BamlDecompiler_Resources.Error_UnknownConnectionId, connId.Id)));
 				return;
 			}
@@ -141,19 +141,17 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 		struct Error {
 			public string Msg;
 
-			public void Callback(XamlContext ctx, XElement elem) {
-				elem.AddBeforeSelf(new XComment(Msg));
-			}
+			public void Callback(XamlContext ctx, XElement elem) => elem.AddBeforeSelf(new XComment(Msg));
 		}
 
 		Dictionary<int, Action<XamlContext, XElement>> ExtractConnectionId(XamlContext ctx, MethodDef method) {
-			var context = new DecompilerContext(method.Module) {
+			var context = new DecompilerContext(0, method.Module) {
 				CurrentType = method.DeclaringType,
 				CurrentMethod = method,
 				CancellationToken = ctx.CancellationToken
 			};
 			var body = new ILBlock(new ILAstBuilder().Build(method, true, context));
-			new ILAstOptimizer().Optimize(context, body);
+			new ILAstOptimizer().Optimize(context, body, out _, out _, out _);
 
 			var connIds = new Dictionary<int, Action<XamlContext, XElement>>();
 			var infos = GetCaseBlocks(body);
@@ -161,7 +159,7 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 				return null;
 			foreach (var info in infos) {
 				Action<XamlContext, XElement> cb = null;
-				foreach (var node in info.Value) {
+				foreach (var node in info.nodes) {
 					var expr = node as ILExpression;
 					if (expr == null)
 						continue;
@@ -219,7 +217,7 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 				}
 
 				if (cb != null) {
-					foreach (var id in info.Key)
+					foreach (var id in info.connIds)
 						connIds[id] = cb;
 				}
 			}
@@ -227,8 +225,8 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 			return connIds;
 		}
 
-		List<KeyValuePair<IList<int>, List<ILNode>>> GetCaseBlocks(ILBlock method) {
-			var list = new List<KeyValuePair<IList<int>, List<ILNode>>>();
+		List<(IList<int> connIds, List<ILNode> nodes)> GetCaseBlocks(ILBlock method) {
+			var list = new List<(IList<int>, List<ILNode>)>();
 			var body = method.Body;
 			if (body.Count == 0)
 				return list;
@@ -238,7 +236,7 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 				foreach (var lbl in sw.CaseBlocks) {
 					if (lbl.Values == null)
 						continue;
-					list.Add(new KeyValuePair<IList<int>, List<ILNode>>(lbl.Values, lbl.Body));
+					list.Add((lbl.Values, lbl.Body));
 				}
 				return list;
 			}
@@ -249,9 +247,7 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 						return null;
 					var cond = body[pos] as ILCondition;
 					if (cond == null) {
-						ILExpression ldthis, ldci4;
-						IField field;
-						if (!body[pos].Match(ILCode.Stfld, out field, out ldthis, out ldci4) || !ldthis.MatchThis() || !ldci4.MatchLdcI4(1))
+						if (!body[pos].Match(ILCode.Stfld, out IField field, out var ldthis, out var ldci4) || !ldthis.MatchThis() || !ldci4.MatchLdcI4(1))
 							return null;
 						return list;
 					}
@@ -262,27 +258,24 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 					bool isEq = true;
 					var condExpr = cond.Condition;
 					for (;;) {
-						ILExpression expr;
-						if (!condExpr.Match(ILCode.LogicNot, out expr))
+						if (!condExpr.Match(ILCode.LogicNot, out ILExpression expr))
 							break;
 						isEq = !isEq;
 						condExpr = expr;
 					}
-					int val;
 					if (condExpr.Code != ILCode.Ceq && condExpr.Code != ILCode.Cne)
 						return null;
 					if (condExpr.Arguments.Count != 2)
 						return null;
-					ILVariable v;
-					if (!condExpr.Arguments[0].Match(ILCode.Ldloc, out v) || v.OriginalParameter?.Index != 1)
+					if (!condExpr.Arguments[0].Match(ILCode.Ldloc, out ILVariable v) || v.OriginalParameter?.Index != 1)
 						return null;
-					if (!condExpr.Arguments[1].Match(ILCode.Ldc_I4, out val))
+					if (!condExpr.Arguments[1].Match(ILCode.Ldc_I4, out int val))
 						return null;
 					if (condExpr.Code == ILCode.Cne)
 						isEq ^= true;
 
 					if (isEq) {
-						list.Add(new KeyValuePair<IList<int>, List<ILNode>>(new[] { val }, cond.TrueBlock.Body));
+						list.Add((new[] { val }, cond.TrueBlock.Body));
 						if (cond.FalseBlock.Body.Count != 0) {
 							body = cond.FalseBlock.Body;
 							pos = 0;
@@ -290,14 +283,14 @@ namespace dnSpy.BamlDecompiler.Rewrite {
 					}
 					else {
 						if (cond.FalseBlock.Body.Count != 0) {
-							list.Add(new KeyValuePair<IList<int>, List<ILNode>>(new[] { val }, cond.FalseBlock.Body));
+							list.Add((new[] { val }, cond.FalseBlock.Body));
 							if (cond.TrueBlock.Body.Count != 0) {
 								body = cond.TrueBlock.Body;
 								pos = 0;
 							}
 						}
 						else {
-							list.Add(new KeyValuePair<IList<int>, List<ILNode>>(new[] { val }, body.Skip(pos).ToList()));
+							list.Add((new[] { val }, body.Skip(pos).ToList()));
 							return list;
 						}
 					}

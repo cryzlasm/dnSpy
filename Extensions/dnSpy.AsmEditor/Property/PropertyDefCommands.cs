@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -52,9 +52,7 @@ namespace dnSpy.AsmEditor.Property {
 			readonly Lazy<IUndoCommandService> undoCommandService;
 
 			[ImportingConstructor]
-			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) {
-				this.undoCommandService = undoCommandService;
-			}
+			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeletePropertyDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeletePropertyDefCommand.Execute(undoCommandService, context.Nodes);
@@ -67,9 +65,7 @@ namespace dnSpy.AsmEditor.Property {
 
 			[ImportingConstructor]
 			EditMenuCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeletePropertyDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeletePropertyDefCommand.Execute(undoCommandService, context.Nodes);
@@ -82,9 +78,7 @@ namespace dnSpy.AsmEditor.Property {
 
 			[ImportingConstructor]
 			CodeCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsEnabled(CodeContext context) => context.IsDefinition && DeletePropertyDefCommand.CanExecute(context.Nodes);
 			public override void Execute(CodeContext context) => DeletePropertyDefCommand.Execute(undoCommandService, context.Nodes);
@@ -110,7 +104,7 @@ namespace dnSpy.AsmEditor.Property {
 		struct DeleteModelNodes {
 			ModelInfo[] infos;
 
-			struct ModelInfo {
+			readonly struct ModelInfo {
 				public readonly TypeDef OwnerType;
 				public readonly int PropertyIndex;
 				public readonly int[] MethodIndexes;
@@ -166,7 +160,7 @@ namespace dnSpy.AsmEditor.Property {
 
 				for (int i = infos.Length - 1; i >= 0; i--) {
 					var node = nodes[i];
-					var info = infos[i];
+					ref readonly var info = ref infos[i];
 					info.OwnerType.Properties.Insert(info.PropertyIndex, node.PropertyDef);
 
 					for (int j = info.Methods.Length - 1; j >= 0; j--)
@@ -180,9 +174,7 @@ namespace dnSpy.AsmEditor.Property {
 		DeletableNodes<PropertyNode> nodes;
 		DeleteModelNodes modelNodes;
 
-		DeletePropertyDefCommand(PropertyNode[] propNodes) {
-			nodes = new DeletableNodes<PropertyNode>(propNodes);
-		}
+		DeletePropertyDefCommand(PropertyNode[] propNodes) => nodes = new DeletableNodes<PropertyNode>(propNodes);
 
 		public string Description => dnSpy_AsmEditor_Resources.DeletePropertyCommand;
 
@@ -423,6 +415,7 @@ namespace dnSpy.AsmEditor.Property {
 				newOptions.CopyTo(propNode.PropertyDef);
 
 				origParentNode.TreeNode.AddChild(propNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { propNode });
 			}
 			else
 				newOptions.CopyTo(propNode.PropertyDef);
@@ -438,6 +431,7 @@ namespace dnSpy.AsmEditor.Property {
 
 				origOptions.CopyTo(propNode.PropertyDef);
 				origParentNode.TreeNode.Children.Insert(origParentChildIndex, propNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { propNode });
 			}
 			else
 				origOptions.CopyTo(propNode.PropertyDef);

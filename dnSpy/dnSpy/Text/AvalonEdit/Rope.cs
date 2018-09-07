@@ -50,8 +50,7 @@ namespace dnSpy.Text.AvalonEdit {
 		public Rope(IEnumerable<T> input) {
 			if (input == null)
 				throw new ArgumentNullException("input");
-			Rope<T> inputRope = input as Rope<T>;
-			if (inputRope != null) {
+			if (input is Rope<T> inputRope) {
 				// clone ropes instead of copying them
 				inputRope.root.Publish();
 				root = inputRope.root;
@@ -91,9 +90,7 @@ namespace dnSpy.Text.AvalonEdit {
 			return new Rope<T>(root);
 		}
 
-		object ICloneable.Clone() {
-			return Clone();
-		}
+		object ICloneable.Clone() => Clone();
 
 		/// <summary>
 		/// Resets the rope to an empty list.
@@ -111,9 +108,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <remarks>
 		/// This method counts as a read access and may be called concurrently to other read accesses.
 		/// </remarks>
-		public int Length {
-			get { return root.length; }
-		}
+		public int Length => root.length;
 
 		/// <summary>
 		/// Gets the length of the rope.
@@ -122,9 +117,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <remarks>
 		/// This method counts as a read access and may be called concurrently to other read accesses.
 		/// </remarks>
-		public int Count {
-			get { return root.length; }
-		}
+		public int Count => root.length;
 
 		/// <summary>
 		/// Inserts another rope into this rope.
@@ -200,9 +193,7 @@ namespace dnSpy.Text.AvalonEdit {
 				nodeStartIndex = nodeStartOffset;
 			}
 
-			internal bool IsInside(int offset) {
-				return offset >= nodeStartIndex && offset < nodeStartIndex + node.length;
-			}
+			internal bool IsInside(int offset) => offset >= nodeStartIndex && offset < nodeStartIndex + node.length;
 		}
 
 		// cached pointer to 'last used node', used to speed up accesses by index that are close together
@@ -339,9 +330,7 @@ namespace dnSpy.Text.AvalonEdit {
 		}
 		#endregion
 
-		bool ICollection<T>.IsReadOnly {
-			get { return false; }
-		}
+		bool ICollection<T>.IsReadOnly => false;
 
 		/// <summary>
 		/// Finds the first occurance of item.
@@ -351,9 +340,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <remarks>
 		/// This method counts as a read access and may be called concurrently to other read accesses.
 		/// </remarks>
-		public int IndexOf(T item) {
-			return IndexOf(item, 0, Length);
-		}
+		public int IndexOf(T item) => IndexOf(item, 0, Length);
 
 		/// <summary>
 		/// Gets the index of the first occurrence the specified item.
@@ -385,9 +372,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <summary>
 		/// Gets the index of the last occurrence of the specified item in this rope.
 		/// </summary>
-		public int LastIndexOf(T item) {
-			return LastIndexOf(item, 0, Length);
-		}
+		public int LastIndexOf(T item) => LastIndexOf(item, 0, Length);
 
 		/// <summary>
 		/// Gets the index of the last occurrence of the specified item in this rope.
@@ -413,25 +398,19 @@ namespace dnSpy.Text.AvalonEdit {
 		/// Inserts the item at the specified index in the rope.
 		/// Runs in O(lg N).
 		/// </summary>
-		public void Insert(int index, T item) {
-			InsertRange(index, new[] { item }, 0, 1);
-		}
+		public void Insert(int index, T item) => InsertRange(index, new[] { item }, 0, 1);
 
 		/// <summary>
 		/// Removes a single item from the rope.
 		/// Runs in O(lg N).
 		/// </summary>
-		public void RemoveAt(int index) {
-			RemoveRange(index, 1);
-		}
+		public void RemoveAt(int index) => RemoveRange(index, 1);
 
 		/// <summary>
 		/// Appends the item at the end of the rope.
 		/// Runs in O(lg N).
 		/// </summary>
-		public void Add(T item) {
-			InsertRange(Length, new[] { item }, 0, 1);
-		}
+		public void Add(T item) => InsertRange(Length, new[] { item }, 0, 1);
 
 		/// <summary>
 		/// Searches the item in the rope.
@@ -440,9 +419,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <remarks>
 		/// This method counts as a read access and may be called concurrently to other read accesses.
 		/// </remarks>
-		public bool Contains(T item) {
-			return IndexOf(item) >= 0;
-		}
+		public bool Contains(T item) => IndexOf(item) >= 0;
 
 		/// <summary>
 		/// Copies the whole content of the rope into the specified array.
@@ -451,9 +428,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// <remarks>
 		/// This method counts as a read access and may be called concurrently to other read accesses.
 		/// </remarks>
-		public void CopyTo(T[] array, int arrayIndex) {
-			CopyTo(0, array, arrayIndex, Length);
-		}
+		public void CopyTo(T[] array, int arrayIndex) => CopyTo(0, array, arrayIndex, Length);
 
 		/// <summary>
 		/// Copies the a part of the rope into the specified array.
@@ -547,8 +522,6 @@ namespace dnSpy.Text.AvalonEdit {
 			}
 		}
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
-			return GetEnumerator();
-		}
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 	}
 }

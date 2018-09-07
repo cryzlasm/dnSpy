@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -42,13 +42,13 @@ namespace dnSpy.Text.Editor {
 		public IDsWpfTextViewHost TextViewHost => wpfTextViewHost;
 
 		public WordWrapStyles WordWrapStyle {
-			get { return wpfTextView.Options.WordWrapStyle(); }
-			set { wpfTextView.Options.SetOptionValue(DefaultTextViewOptions.WordWrapStyleId, value); }
+			get => wpfTextView.Options.WordWrapStyle();
+			set => wpfTextView.Options.SetOptionValue(DefaultTextViewOptions.WordWrapStyleId, value);
 		}
 
 		public bool ShowLineNumbers {
-			get { return wpfTextView.Options.IsLineNumberMarginEnabled(); }
-			set { wpfTextView.Options.SetOptionValue(DefaultTextViewHostOptions.LineNumberMarginId, value); }
+			get => wpfTextView.Options.IsLineNumberMarginEnabled();
+			set => wpfTextView.Options.SetOptionValue(DefaultTextViewHostOptions.LineNumberMarginId, value);
 		}
 
 		readonly IDsWpfTextViewHost wpfTextViewHost;
@@ -60,9 +60,7 @@ namespace dnSpy.Text.Editor {
 		sealed class GuidObjectsProvider : IGuidObjectsProvider {
 			readonly LogEditor logEditorUI;
 
-			public GuidObjectsProvider(LogEditor logEditorUI) {
-				this.logEditorUI = logEditorUI;
-			}
+			public GuidObjectsProvider(LogEditor logEditorUI) => this.logEditorUI = logEditorUI;
 
 			public IEnumerable<GuidObject> GetGuidObjects(GuidObjectsProviderArgs args) {
 				yield return new GuidObject(MenuConstants.GUIDOBJ_LOG_EDITOR_GUID, logEditorUI);

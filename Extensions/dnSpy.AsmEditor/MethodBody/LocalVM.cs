@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -20,6 +20,7 @@
 using System;
 using System.Windows.Input;
 using dnlib.DotNet;
+using dnlib.DotNet.Pdb;
 using dnSpy.AsmEditor.Commands;
 using dnSpy.AsmEditor.DnlibDialogs;
 using dnSpy.AsmEditor.Properties;
@@ -41,7 +42,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		public ICommand EditTypeCommand => new RelayCommand(a => EditType());
 
 		public int Index {
-			get { return index; }
+			get => index;
 			set {
 				if (index != value) {
 					index = value;
@@ -52,7 +53,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		int index;
 
 		public bool IsPinned {
-			get { return Type is PinnedSig; }
+			get => Type is PinnedSig;
 			set {
 				var t = Type;
 				if (t == null)
@@ -69,7 +70,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		}
 
 		public TypeSig Type {
-			get { return type; }
+			get => type;
 			set {
 				if (type != value) {
 					type = value;
@@ -81,7 +82,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		TypeSig type;
 
 		public string Name {
-			get { return name; }
+			get => name;
 			set {
 				if (name != value) {
 					name = value;
@@ -91,22 +92,27 @@ namespace dnSpy.AsmEditor.MethodBody {
 		}
 		string name;
 
-		public bool IsCompilerGenerated {
-			get { return PdbAttributes == 1; }
-			set { PdbAttributes = value ? 1 : 0; }
+		public bool DebuggerHidden {
+			get => (Attributes & PdbLocalAttributes.DebuggerHidden) != 0;
+			set {
+				if (value)
+					Attributes |= PdbLocalAttributes.DebuggerHidden;
+				else
+					Attributes &= ~PdbLocalAttributes.DebuggerHidden;
+			}
 		}
 
-		public int PdbAttributes {
-			get { return pdbAttributes; }
+		public PdbLocalAttributes Attributes {
+			get => attributes;
 			set {
-				if (pdbAttributes != value) {
-					pdbAttributes = value;
-					OnPropertyChanged(nameof(PdbAttributes));
-					OnPropertyChanged(nameof(IsCompilerGenerated));
+				if (attributes != value) {
+					attributes = value;
+					OnPropertyChanged(nameof(Attributes));
+					OnPropertyChanged(nameof(DebuggerHidden));
 				}
 			}
 		}
-		int pdbAttributes;
+		PdbLocalAttributes attributes;
 
 		readonly TypeSigCreatorOptions typeSigCreatorOptions;
 
@@ -126,8 +132,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 			if (typeSigCreator == null)
 				throw new InvalidOperationException();
 
-			bool canceled;
-			var newType = typeSigCreator.Create(typeSigCreatorOptions, Type, out canceled);
+			var newType = typeSigCreator.Create(typeSigCreatorOptions, Type, out bool canceled);
 			if (canceled)
 				return;
 
@@ -140,13 +145,13 @@ namespace dnSpy.AsmEditor.MethodBody {
 		public void InitializeFrom(LocalOptions options) {
 			Type = options.Type;
 			Name = options.Name;
-			PdbAttributes = options.PdbAttributes;
+			Attributes = options.Attributes;
 		}
 
 		public LocalOptions CopyTo(LocalOptions options) {
 			options.Type = Type;
 			options.Name = Name;
-			options.PdbAttributes = PdbAttributes;
+			options.Attributes = Attributes;
 			return options;
 		}
 

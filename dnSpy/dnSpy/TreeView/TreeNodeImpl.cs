@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -40,18 +40,21 @@ namespace dnSpy.TreeView {
 		}
 
 		public bool LazyLoading {
-			get { return Node.LazyLoading; }
-			set { Node.LazyLoading = value; }
+			get => Node.LazyLoading;
+			set {
+				if (Node.LazyLoading != value)
+					Node.LazyLoading = value;
+			}
 		}
 
 		public bool IsExpanded {
-			get { return Node.IsExpanded; }
-			set { Node.IsExpanded = value; }
+			get => Node.IsExpanded;
+			set => Node.IsExpanded = value;
 		}
 
 		public bool IsHidden {
-			get { return Node.IsHidden; }
-			set { Node.IsHidden = value; }
+			get => Node.IsHidden;
+			set => Node.IsHidden = value;
 		}
 
 		public bool IsVisible => Node.IsVisible;

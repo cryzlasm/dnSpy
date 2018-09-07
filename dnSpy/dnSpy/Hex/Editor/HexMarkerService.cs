@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -27,9 +27,9 @@ using System.Windows.Media;
 using dnSpy.Contracts.Hex;
 using dnSpy.Contracts.Hex.Classification;
 using dnSpy.Contracts.Hex.Editor;
+using dnSpy.Contracts.Hex.Editor.OptionsExtensionMethods;
 using dnSpy.Contracts.Hex.Formatting;
 using dnSpy.Contracts.Hex.Tagging;
-using dnSpy.Contracts.Themes;
 using TWPF = dnSpy.Text.WPF;
 using VST = Microsoft.VisualStudio.Text;
 using VSTC = Microsoft.VisualStudio.Text.Classification;
@@ -43,17 +43,15 @@ namespace dnSpy.Hex.Editor {
 	sealed class HexMarkerServiceWpfHexViewCreationListener : WpfHexViewCreationListener {
 		readonly HexViewTagAggregatorFactoryService viewTagAggregatorFactoryService;
 		readonly HexEditorFormatMapService editorFormatMapService;
-		readonly IThemeService themeService;
 
 		[ImportingConstructor]
-		HexMarkerServiceWpfHexViewCreationListener(HexViewTagAggregatorFactoryService viewTagAggregatorFactoryService, HexEditorFormatMapService editorFormatMapService, IThemeService themeService) {
+		HexMarkerServiceWpfHexViewCreationListener(HexViewTagAggregatorFactoryService viewTagAggregatorFactoryService, HexEditorFormatMapService editorFormatMapService) {
 			this.viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
 			this.editorFormatMapService = editorFormatMapService;
-			this.themeService = themeService;
 		}
 
 		public override void HexViewCreated(WpfHexView hexView) =>
-			new HexMarkerService(hexView, viewTagAggregatorFactoryService.CreateTagAggregator<HexMarkerTag>(hexView), editorFormatMapService.GetEditorFormatMap(hexView), themeService);
+			new HexMarkerService(hexView, viewTagAggregatorFactoryService.CreateTagAggregator<HexMarkerTag>(hexView), editorFormatMapService.GetEditorFormatMap(hexView));
 	}
 
 	sealed class HexMarkerService {
@@ -79,26 +77,18 @@ namespace dnSpy.Hex.Editor {
 		readonly HexAdornmentLayer textMarkerAdornmentLayer;
 		readonly HexAdornmentLayer negativeTextMarkerAdornmentLayer;
 		readonly List<MarkerElement> markerElements;
-		readonly IThemeService themeService;
 		bool useReducedOpacityForHighContrast;
+		bool isInContrastMode;
 
-		public HexMarkerService(WpfHexView wpfHexView, HexTagAggregator<HexMarkerTag> tagAggregator, VSTC.IEditorFormatMap editorFormatMap, IThemeService themeService) {
-			if (wpfHexView == null)
-				throw new ArgumentNullException(nameof(wpfHexView));
-			if (tagAggregator == null)
-				throw new ArgumentNullException(nameof(tagAggregator));
-			if (editorFormatMap == null)
-				throw new ArgumentNullException(nameof(editorFormatMap));
-			if (themeService == null)
-				throw new ArgumentNullException(nameof(themeService));
-			this.wpfHexView = wpfHexView;
-			this.tagAggregator = tagAggregator;
-			this.editorFormatMap = editorFormatMap;
-			this.themeService = themeService;
+		public HexMarkerService(WpfHexView wpfHexView, HexTagAggregator<HexMarkerTag> tagAggregator, VSTC.IEditorFormatMap editorFormatMap) {
+			this.wpfHexView = wpfHexView ?? throw new ArgumentNullException(nameof(wpfHexView));
+			this.tagAggregator = tagAggregator ?? throw new ArgumentNullException(nameof(tagAggregator));
+			this.editorFormatMap = editorFormatMap ?? throw new ArgumentNullException(nameof(editorFormatMap));
 			textMarkerAdornmentLayer = wpfHexView.GetAdornmentLayer(PredefinedHexAdornmentLayers.TextMarker);
 			negativeTextMarkerAdornmentLayer = wpfHexView.GetAdornmentLayer(PredefinedHexAdornmentLayers.NegativeTextMarker);
 			markerElements = new List<MarkerElement>();
 			useReducedOpacityForHighContrast = wpfHexView.Options.GetOptionValue(DefaultWpfHexViewOptions.UseReducedOpacityForHighContrastOptionId);
+			isInContrastMode = wpfHexView.Options.IsInContrastMode();
 			onRemovedDelegate = OnRemoved;
 			wpfHexView.Closed += WpfHexView_Closed;
 			wpfHexView.LayoutChanged += WpfHexView_LayoutChanged;
@@ -109,8 +99,15 @@ namespace dnSpy.Hex.Editor {
 
 		void Options_OptionChanged(object sender, VSTE.EditorOptionChangedEventArgs e) {
 			if (e.OptionId == DefaultWpfHexViewOptions.UseReducedOpacityForHighContrastOptionName) {
+				bool old = ShouldUseHighContrastOpacity;
 				useReducedOpacityForHighContrast = wpfHexView.Options.GetOptionValue(DefaultWpfHexViewOptions.UseReducedOpacityForHighContrastOptionId);
-				if (themeService.Theme.IsHighContrast)
+				if (old != ShouldUseHighContrastOpacity)
+					RefreshExistingMarkers();
+			}
+			else if (e.OptionId == DefaultHexViewHostOptions.IsInContrastModeName) {
+				bool old = ShouldUseHighContrastOpacity;
+				isInContrastMode = wpfHexView.Options.IsInContrastMode();
+				if (old != ShouldUseHighContrastOpacity)
 					RefreshExistingMarkers();
 			}
 		}
@@ -119,7 +116,7 @@ namespace dnSpy.Hex.Editor {
 			readonly Geometry geometry;
 
 			public Brush BackgroundBrush {
-				get { return backgroundBrush; }
+				get => backgroundBrush;
 				set {
 					if (value == null)
 						throw new ArgumentNullException(nameof(value));
@@ -132,7 +129,7 @@ namespace dnSpy.Hex.Editor {
 			Brush backgroundBrush;
 
 			public Pen Pen {
-				get { return pen; }
+				get => pen;
 				set {
 					if (pen != value) {
 						pen = value;
@@ -149,14 +146,10 @@ namespace dnSpy.Hex.Editor {
 			public MarkerElement(HexBufferSpan span, string type, int zIndex, Geometry geometry) {
 				if (span.IsDefault)
 					throw new ArgumentException();
-				if (type == null)
-					throw new ArgumentNullException(nameof(type));
-				if (geometry == null)
-					throw new ArgumentNullException(nameof(geometry));
 				Span = span;
-				Type = type;
+				Type = type ?? throw new ArgumentNullException(nameof(type));
 				ZIndex = zIndex;
-				this.geometry = geometry;
+				this.geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
 				Panel.SetZIndex(this, zIndex);
 			}
 
@@ -294,6 +287,8 @@ namespace dnSpy.Hex.Editor {
 			textMarkerAdornmentLayer.RemoveAllAdornments();
 		}
 
+		bool ShouldUseHighContrastOpacity => useReducedOpacityForHighContrast && isInContrastMode;
+
 		Brush GetBackgroundBrush(ResourceDictionary props) {
 			Color? color;
 			SolidColorBrush scBrush;
@@ -323,7 +318,7 @@ namespace dnSpy.Hex.Editor {
 				newBrush.Freeze();
 			}
 
-			if (useReducedOpacityForHighContrast && themeService.Theme.IsHighContrast) {
+			if (ShouldUseHighContrastOpacity) {
 				newBrush = newBrush.Clone();
 				newBrush.Opacity = BG_BRUSH_HIGHCONTRAST_OPACITY;
 				if (newBrush.CanFreeze)

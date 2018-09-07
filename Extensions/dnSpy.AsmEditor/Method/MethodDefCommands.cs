@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -53,9 +53,7 @@ namespace dnSpy.AsmEditor.Method {
 			readonly Lazy<IUndoCommandService> undoCommandService;
 
 			[ImportingConstructor]
-			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) {
-				this.undoCommandService = undoCommandService;
-			}
+			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteMethodDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteMethodDefCommand.Execute(undoCommandService, context.Nodes);
@@ -68,9 +66,7 @@ namespace dnSpy.AsmEditor.Method {
 
 			[ImportingConstructor]
 			EditMenuCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteMethodDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteMethodDefCommand.Execute(undoCommandService, context.Nodes);
@@ -83,9 +79,7 @@ namespace dnSpy.AsmEditor.Method {
 
 			[ImportingConstructor]
 			CodeCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsEnabled(CodeContext context) => context.IsDefinition && DeleteMethodDefCommand.CanExecute(context.Nodes);
 			public override void Execute(CodeContext context) => DeleteMethodDefCommand.Execute(undoCommandService, context.Nodes);
@@ -119,7 +113,7 @@ namespace dnSpy.AsmEditor.Method {
 		struct DeleteModelNodes {
 			ModelInfo[] infos;
 
-			struct ModelInfo {
+			readonly struct ModelInfo {
 				public readonly TypeDef OwnerType;
 				public readonly int MethodIndex;
 				public readonly List<PropEventInfo> PropEventInfos;
@@ -134,7 +128,7 @@ namespace dnSpy.AsmEditor.Method {
 					EventOther,
 				}
 
-				public struct PropEventInfo {
+				public readonly struct PropEventInfo {
 					public readonly ICodedToken PropOrEvent;
 					public readonly PropEventType PropEventType;
 					public readonly int Index;
@@ -214,7 +208,7 @@ namespace dnSpy.AsmEditor.Method {
 
 				for (int i = infos.Length - 1; i >= 0; i--) {
 					var node = nodes[i];
-					var info = infos[i];
+					ref readonly var info = ref infos[i];
 
 					info.OwnerType.Methods.Insert(info.MethodIndex, node.MethodDef);
 
@@ -275,9 +269,7 @@ namespace dnSpy.AsmEditor.Method {
 		DeletableNodes<MethodNode> nodes;
 		DeleteModelNodes modelNodes;
 
-		DeleteMethodDefCommand(MethodNode[] methodNodes) {
-			nodes = new DeletableNodes<MethodNode>(methodNodes);
-		}
+		DeleteMethodDefCommand(MethodNode[] methodNodes) => nodes = new DeletableNodes<MethodNode>(methodNodes);
 
 		public string Description => dnSpy_AsmEditor_Resources.DeleteMethodCommand;
 
@@ -509,7 +501,7 @@ namespace dnSpy.AsmEditor.Method {
 
 			nameChanged = origOptions.Name != newOptions.Name;
 			if (nameChanged)
-				memberRefInfos = RefFinder.FindMemberRefsToThisModule(methodNode.GetModule()).Where(a => RefFinder.MethodEqualityComparerInstance.Equals(a, methodNode.MethodDef)).Select(a => new Field.MemberRefInfo(a)).ToArray();
+				memberRefInfos = RefFinder.FindMemberRefsToThisModule(methodNode.GetModule()).Where(a => RefFinder.Equals(a, methodNode.MethodDef)).Select(a => new Field.MemberRefInfo(a)).ToArray();
 		}
 
 		public string Description => dnSpy_AsmEditor_Resources.EditMethodCommand2;
@@ -524,6 +516,7 @@ namespace dnSpy.AsmEditor.Method {
 				newOptions.CopyTo(methodNode.MethodDef);
 
 				origParentNode.TreeNode.AddChild(methodNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { methodNode });
 			}
 			else
 				newOptions.CopyTo(methodNode.MethodDef);
@@ -543,6 +536,7 @@ namespace dnSpy.AsmEditor.Method {
 
 				origOptions.CopyTo(methodNode.MethodDef);
 				origParentNode.TreeNode.Children.Insert(origParentChildIndex, methodNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { methodNode });
 			}
 			else
 				origOptions.CopyTo(methodNode.MethodDef);

@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -36,9 +36,7 @@ namespace dnSpy.Hex.Files {
 			}
 		}
 
-		public SpanDataCollection() {
-			spanDataList = new List<SpanData<TData>>();
-		}
+		public SpanDataCollection() => spanDataList = new List<SpanData<TData>>();
 
 		public TData FindData(HexPosition position) {
 			int index = GetStartIndex(position);
@@ -108,7 +106,7 @@ namespace dnSpy.Hex.Files {
 		void SortList() => spanDataList.Sort(SpanDataComparer.Instance);
 	}
 
-	public struct SpanData<TData> {
+	readonly struct SpanData<TData> {
 		public HexSpan Span { get; }
 		public TData Data { get; }
 		public SpanData(HexSpan span, TData data) {

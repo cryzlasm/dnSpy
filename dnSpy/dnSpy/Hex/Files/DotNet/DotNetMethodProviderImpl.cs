@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -31,7 +31,7 @@ namespace dnSpy.Hex.Files.DotNet {
 		readonly MethodBodyRvaAndRid[] methodBodyRvas;
 		readonly HexSpan methodBodiesSpan;
 
-		struct MethodBodyRvaAndRid {
+		readonly struct MethodBodyRvaAndRid {
 			// This is an RVA instead of a HexPosition so it's not needed to translate all method
 			// bodies' RVAs to HexPositions.
 			public uint Rva { get; }
@@ -57,16 +57,14 @@ namespace dnSpy.Hex.Files.DotNet {
 			: base(file) {
 			if (file == null)
 				throw new ArgumentNullException(nameof(file));
-			if (peHeaders == null)
-				throw new ArgumentNullException(nameof(peHeaders));
-			this.peHeaders = peHeaders;
+			this.peHeaders = peHeaders ?? throw new ArgumentNullException(nameof(peHeaders));
 			methodBodyRvas = CreateMethodBodyRvas(tablesHeap?.MDTables[(int)Table.Method]);
 			methodBodiesSpan = GetMethodBodiesSpan(methodBodyRvas);
 		}
 
 		HexSpan GetMethodBodiesSpan(MethodBodyRvaAndRid[] methodBodyRvas) {
 			if (methodBodyRvas.Length == 0)
-				return default(HexSpan);
+				return default;
 			int index = methodBodyRvas.Length - 1;
 			var last = methodBodyRvas[index];
 			var info = ParseMethodBody(index + 1, new[] { last.Rid }, peHeaders.RvaToBufferPosition(last.Rva));
@@ -116,7 +114,7 @@ namespace dnSpy.Hex.Files.DotNet {
 			endPos = HexPosition.Min(File.Span.End, peHeaders.RvaToBufferPosition(maxMethodBodyEndRva));
 			if (endPos < methodBodyPosition)
 				endPos = methodBodyPosition;
-			return new MethodBodyInfo(tokens, HexSpan.FromBounds(methodBodyPosition, endPos), HexSpan.FromBounds(endPos, endPos), default(HexSpan), MethodBodyInfoFlags.Invalid);
+			return new MethodBodyInfo(tokens, HexSpan.FromBounds(methodBodyPosition, endPos), HexSpan.FromBounds(endPos, endPos), default, MethodBodyInfoFlags.Invalid);
 		}
 
 		public override bool IsMethodPosition(HexPosition position) => methodBodiesSpan.Contains(position);
@@ -160,7 +158,7 @@ namespace dnSpy.Hex.Files.DotNet {
 			while (lo <= hi) {
 				int index = (lo + hi) / 2;
 
-				var info = array[index];
+				ref readonly var info = ref array[index];
 				if (rva < info.Rva)
 					hi = index - 1;
 				else if (rva > info.Rva)

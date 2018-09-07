@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -30,8 +30,8 @@ namespace dnSpy.Text.Classification {
 		public bool IsInBatchUpdate => categoryMap.IsInBatchUpdate;
 
 		public TextFormattingRunProperties DefaultTextProperties {
-			get { return categoryMap.DefaultTextProperties; }
-			set { categoryMap.DefaultTextProperties = value; }
+			get => categoryMap.DefaultTextProperties;
+			set => categoryMap.DefaultTextProperties = value;
 		}
 
 		public event EventHandler<EventArgs> ClassificationFormatMappingChanged;
@@ -40,12 +40,8 @@ namespace dnSpy.Text.Classification {
 		IClassificationFormatMap categoryMap;
 
 		protected ViewClassificationFormatMap(ClassificationFormatMapService classificationFormatMapService, string appearanceCategoryName) {
-			if (classificationFormatMapService == null)
-				throw new ArgumentNullException(nameof(classificationFormatMapService));
-			if (appearanceCategoryName == null)
-				throw new ArgumentNullException(nameof(appearanceCategoryName));
-			this.classificationFormatMapService = classificationFormatMapService;
-			this.appearanceCategoryName = appearanceCategoryName;
+			this.classificationFormatMapService = classificationFormatMapService ?? throw new ArgumentNullException(nameof(classificationFormatMapService));
+			this.appearanceCategoryName = appearanceCategoryName ?? throw new ArgumentNullException(nameof(appearanceCategoryName));
 		}
 
 		protected void Initialize() => UpdateAppearanceMap();
@@ -113,9 +109,7 @@ namespace dnSpy.Text.Classification {
 
 		public TextViewClassificationFormatMap(ClassificationFormatMapService classificationFormatMapService, ITextView textView)
 			: base(classificationFormatMapService, DefaultWpfViewOptions.AppearanceCategoryName) {
-			if (textView == null)
-				throw new ArgumentNullException(nameof(textView));
-			this.textView = textView;
+			this.textView = textView ?? throw new ArgumentNullException(nameof(textView));
 			textView.Options.OptionChanged += Options_OptionChanged;
 			Initialize();
 		}

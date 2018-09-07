@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -141,7 +141,7 @@ namespace dnSpy.Documents.Tabs.DocViewer {
 		DecompileContext CreateDecompileContext(IShowContext ctx) {
 			var decompileContext = new DecompileContext();
 			var decompilationContext = new DecompilationContext();
-			decompilationContext.CalculateBinSpans = true;
+			decompilationContext.CalculateILSpans = true;
 			decompilationContext.GetDisableAssemblyLoad = () => decompileDocumentTabContentFactory.DocumentService.DisableAssemblyLoad();
 			decompilationContext.IsBodyModified = m => decompileDocumentTabContentFactory.MethodAnnotations.IsBodyModified(m);
 			var dispatcher = Dispatcher.CurrentDispatcher;
@@ -174,8 +174,7 @@ namespace dnSpy.Documents.Tabs.DocViewer {
 		public override void OnShow(IShowContext ctx) {
 			UpdateLanguage();
 			var decompileContext = CreateDecompileContext(ctx);
-			IContentType contentType;
-			decompileContext.CachedContent = decompileDocumentTabContentFactory.DecompilationCache.Lookup(decompileContext.DecompileNodeContext.Decompiler, nodes, out contentType);
+			decompileContext.CachedContent = decompileDocumentTabContentFactory.DecompilationCache.Lookup(decompileContext.DecompileNodeContext.Decompiler, nodes, out var contentType);
 			decompileContext.DecompileNodeContext.ContentType = contentType;
 			ctx.Tag = decompileContext;
 		}

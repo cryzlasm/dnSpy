@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -43,9 +43,8 @@ namespace dnSpy.Menus {
 
 		public T GetOrCreateState<T>(object key, Func<T> createState) where T : class {
 			Debug.Assert(key != null);
-			object o;
 			T value;
-			if (state.TryGetValue(key, out o)) {
+			if (state.TryGetValue(key, out object o)) {
 				value = o as T;
 				Debug.Assert(o == null || value != null);
 				return value;
@@ -61,18 +60,23 @@ namespace dnSpy.Menus {
 				if (o.Object is T)
 					return (T)o.Object;
 			}
-			return default(T);
+			return default;
 		}
+
+		public event EventHandler OnDisposed;
 
 		public void Dispose() {
 			if (IsDisposed)
 				return;
 			IsDisposed = true;
+			OnDisposed?.Invoke(this, EventArgs.Empty);
+			OnDisposed = null;
 
 			// Clear everything. We don't want to hold on to objects that could've gotten disposed,
 			// eg. IDocumentViewer. Those instances could throw ObjectDisposedException
 			guidObjects.Clear();
 			guidObjects.Add(new GuidObject(Guid.Empty, disposedObject));
+			state.Clear();
 		}
 		static readonly object disposedObject = new object();
 	}

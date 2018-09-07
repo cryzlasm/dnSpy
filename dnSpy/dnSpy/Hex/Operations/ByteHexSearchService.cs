@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -61,7 +61,7 @@ namespace dnSpy.Hex.Operations {
 		sealed class FindAllCoreEnumerable : IEnumerable<HexBufferSpan> {
 			readonly ByteHexSearchService owner;
 			/*readonly*/ HexBufferSpan searchRange;
-			/*readonly*/ HexBufferPoint startingPosition;
+			readonly HexBufferPoint startingPosition;
 			readonly HexFindOptions options;
 			/*readonly*/ CancellationToken cancellationToken;
 
@@ -97,7 +97,7 @@ namespace dnSpy.Hex.Operations {
 					realEnumerator.Dispose();
 				}
 
-				public void Reset() { throw new NotSupportedException(); }
+				public void Reset() => throw new NotSupportedException();
 			}
 		}
 

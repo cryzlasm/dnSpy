@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -32,14 +32,12 @@ namespace dnSpy.ToolWindows {
 		public IEnumerable<ToolWindowContent> TabContents => TabContentImpls.Select(a => a.Content);
 
 		public ToolWindowContent ActiveTabContent {
-			get { return ((TabContentImpl)TabGroup.ActiveTabContent)?.Content; }
+			get => ((TabContentImpl)TabGroup.ActiveTabContent)?.Content;
 			set {
 				if (value == null)
 					throw new ArgumentNullException(nameof(value));
 				var impl = GetTabContentImpl(value);
-				if (impl == null)
-					throw new ArgumentException();
-				TabGroup.ActiveTabContent = impl;
+				TabGroup.ActiveTabContent = impl ?? throw new ArgumentException();
 			}
 		}
 

@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -108,6 +108,7 @@ namespace dnSpy.Text.Editor {
 		readonly IAdornmentLayerDefinitionService adornmentLayerDefinitionService;
 		readonly ILineTransformProviderService lineTransformProviderService;
 		readonly Lazy<IWpfTextViewCreationListener, IDeferrableContentTypeAndTextViewRoleMetadata>[] wpfTextViewCreationListeners;
+		readonly Lazy<ITextViewCreationListener, IDeferrableContentTypeAndTextViewRoleMetadata>[] textViewCreationListeners;
 		readonly AdornmentLayerCollection normalAdornmentLayerCollection;
 		readonly AdornmentLayerCollection overlayAdornmentLayerCollection;
 		readonly AdornmentLayerCollection underlayAdornmentLayerCollection;
@@ -135,21 +136,15 @@ namespace dnSpy.Text.Editor {
 		static readonly AdornmentLayerDefinition selectionAdornmentLayerDefinition;
 #pragma warning restore 0169
 
-		public WpfTextView(ITextViewModel textViewModel, ITextViewRoleSet roles, IEditorOptions parentOptions, IEditorOptionsFactoryService editorOptionsFactoryService, ICommandService commandService, ISmartIndentationService smartIndentationService, IFormattedTextSourceFactoryService formattedTextSourceFactoryService, IViewClassifierAggregatorService viewClassifierAggregatorService, ITextAndAdornmentSequencerFactoryService textAndAdornmentSequencerFactoryService, IClassificationFormatMapService classificationFormatMapService, IEditorFormatMapService editorFormatMapService, IAdornmentLayerDefinitionService adornmentLayerDefinitionService, ILineTransformProviderService lineTransformProviderService, ISpaceReservationStackProvider spaceReservationStackProvider, IWpfTextViewConnectionListenerServiceProvider wpfTextViewConnectionListenerServiceProvider, IBufferGraphFactoryService bufferGraphFactoryService, Lazy<IWpfTextViewCreationListener, IDeferrableContentTypeAndTextViewRoleMetadata>[] wpfTextViewCreationListeners) {
-			if (textViewModel == null)
-				throw new ArgumentNullException(nameof(textViewModel));
+		public WpfTextView(ITextViewModel textViewModel, ITextViewRoleSet roles, IEditorOptions parentOptions, IEditorOptionsFactoryService editorOptionsFactoryService, ICommandService commandService, ISmartIndentationService smartIndentationService, IFormattedTextSourceFactoryService formattedTextSourceFactoryService, IViewClassifierAggregatorService viewClassifierAggregatorService, ITextAndAdornmentSequencerFactoryService textAndAdornmentSequencerFactoryService, IClassificationFormatMapService classificationFormatMapService, IEditorFormatMapService editorFormatMapService, IAdornmentLayerDefinitionService adornmentLayerDefinitionService, ILineTransformProviderService lineTransformProviderService, ISpaceReservationStackProvider spaceReservationStackProvider, IWpfTextViewConnectionListenerServiceProvider wpfTextViewConnectionListenerServiceProvider, IBufferGraphFactoryService bufferGraphFactoryService, Lazy<IWpfTextViewCreationListener, IDeferrableContentTypeAndTextViewRoleMetadata>[] wpfTextViewCreationListeners, Lazy<ITextViewCreationListener, IDeferrableContentTypeAndTextViewRoleMetadata>[] textViewCreationListeners) {
 			if (roles == null)
 				throw new ArgumentNullException(nameof(roles));
-			if (parentOptions == null)
-				throw new ArgumentNullException(nameof(parentOptions));
 			if (editorOptionsFactoryService == null)
 				throw new ArgumentNullException(nameof(editorOptionsFactoryService));
 			if (commandService == null)
 				throw new ArgumentNullException(nameof(commandService));
 			if (smartIndentationService == null)
 				throw new ArgumentNullException(nameof(smartIndentationService));
-			if (formattedTextSourceFactoryService == null)
-				throw new ArgumentNullException(nameof(formattedTextSourceFactoryService));
 			if (viewClassifierAggregatorService == null)
 				throw new ArgumentNullException(nameof(viewClassifierAggregatorService));
 			if (textAndAdornmentSequencerFactoryService == null)
@@ -158,14 +153,12 @@ namespace dnSpy.Text.Editor {
 				throw new ArgumentNullException(nameof(classificationFormatMapService));
 			if (editorFormatMapService == null)
 				throw new ArgumentNullException(nameof(editorFormatMapService));
-			if (adornmentLayerDefinitionService == null)
-				throw new ArgumentNullException(nameof(adornmentLayerDefinitionService));
-			if (lineTransformProviderService == null)
-				throw new ArgumentNullException(nameof(lineTransformProviderService));
 			if (spaceReservationStackProvider == null)
 				throw new ArgumentNullException(nameof(spaceReservationStackProvider));
 			if (wpfTextViewCreationListeners == null)
 				throw new ArgumentNullException(nameof(wpfTextViewCreationListeners));
+			if (textViewCreationListeners == null)
+				throw new ArgumentNullException(nameof(textViewCreationListeners));
 			if (wpfTextViewConnectionListenerServiceProvider == null)
 				throw new ArgumentNullException(nameof(wpfTextViewConnectionListenerServiceProvider));
 			if (bufferGraphFactoryService == null)
@@ -174,23 +167,24 @@ namespace dnSpy.Text.Editor {
 			physicalLineCache = new PhysicalLineCache(32);
 			visiblePhysicalLines = new List<PhysicalLine>();
 			invalidatedRegions = new List<SnapshotSpan>();
-			this.formattedTextSourceFactoryService = formattedTextSourceFactoryService;
+			this.formattedTextSourceFactoryService = formattedTextSourceFactoryService ?? throw new ArgumentNullException(nameof(formattedTextSourceFactoryService));
 			zoomLevel = ZoomConstants.DefaultZoom;
 			DsImage.SetZoom(VisualElement, zoomLevel / 100);
-			this.adornmentLayerDefinitionService = adornmentLayerDefinitionService;
-			this.lineTransformProviderService = lineTransformProviderService;
+			this.adornmentLayerDefinitionService = adornmentLayerDefinitionService ?? throw new ArgumentNullException(nameof(adornmentLayerDefinitionService));
+			this.lineTransformProviderService = lineTransformProviderService ?? throw new ArgumentNullException(nameof(lineTransformProviderService));
 			this.wpfTextViewCreationListeners = wpfTextViewCreationListeners.Where(a => roles.ContainsAny(a.Metadata.TextViewRoles)).ToArray();
+			this.textViewCreationListeners = textViewCreationListeners.Where(a => roles.ContainsAny(a.Metadata.TextViewRoles)).ToArray();
 			recreateLineTransformProvider = true;
 			normalAdornmentLayerCollection = new AdornmentLayerCollection(this, LayerKind.Normal);
 			overlayAdornmentLayerCollection = new AdornmentLayerCollection(this, LayerKind.Overlay);
 			underlayAdornmentLayerCollection = new AdornmentLayerCollection(this, LayerKind.Underlay);
 			IsVisibleChanged += WpfTextView_IsVisibleChanged;
 			Properties = new PropertyCollection();
-			TextViewModel = textViewModel;
+			TextViewModel = textViewModel ?? throw new ArgumentNullException(nameof(textViewModel));
 			BufferGraph = bufferGraphFactoryService.CreateBufferGraph(TextViewModel.VisualBuffer);
 			Roles = roles;
 			Options = editorOptionsFactoryService.GetOptions(this);
-			Options.Parent = parentOptions;
+			Options.Parent = parentOptions ?? throw new ArgumentNullException(nameof(parentOptions));
 			ViewScroller = new ViewScroller(this);
 			hasKeyboardFocus = IsKeyboardFocusWithin;
 			oldViewState = new ViewState(this);
@@ -238,6 +232,13 @@ namespace dnSpy.Text.Editor {
 
 		void NotifyTextViewCreated(IContentType newContentType, IContentType oldContentType) {
 			foreach (var lz in wpfTextViewCreationListeners) {
+				if (oldContentType != null && oldContentType.IsOfAnyType(lz.Metadata.ContentTypes))
+					continue;
+				if (!TextDataModel.ContentType.IsOfAnyType(lz.Metadata.ContentTypes))
+					continue;
+				lz.Value.TextViewCreated(this);
+			}
+			foreach (var lz in textViewCreationListeners) {
 				if (oldContentType != null && oldContentType.IsOfAnyType(lz.Metadata.ContentTypes))
 					continue;
 				if (!TextDataModel.ContentType.IsOfAnyType(lz.Metadata.ContentTypes))
@@ -302,14 +303,12 @@ namespace dnSpy.Text.Editor {
 		void AggregateClassifier_ClassificationChanged(object sender, ClassificationChangedEventArgs e) =>
 			Dispatcher.BeginInvoke(new Action(() => InvalidateSpan(e.ChangeSpan)), DispatcherPriority.Normal);
 
-		void ClassificationFormatMap_ClassificationFormatMappingChanged(object sender, EventArgs e) {
-			Dispatcher.BeginInvoke(new Action(() => {
-				if (IsClosed)
-					return;
-				UpdateForceClearTypeIfNeeded();
-				InvalidateFormattedLineSource(true);
-			}), DispatcherPriority.Normal);
-		}
+		void ClassificationFormatMap_ClassificationFormatMappingChanged(object sender, EventArgs e) => Dispatcher.BeginInvoke(new Action(() => {
+			if (IsClosed)
+				return;
+			UpdateForceClearTypeIfNeeded();
+			InvalidateFormattedLineSource(true);
+		}), DispatcherPriority.Normal);
 
 		void EditorFormatMap_FormatMappingChanged(object sender, FormatItemsEventArgs e) {
 			if (e.ChangedItems.Contains(EditorFormatMapConstants.TextViewBackgroundId))
@@ -434,7 +433,7 @@ namespace dnSpy.Text.Editor {
 			tabSize = Math.Max(1, tabSize);
 			tabSize = Math.Min(60, tabSize);
 
-			// This value is what VS uses, see: https://msdn.microsoft.com/en-us/library/microsoft.visualstudio.text.formatting.iformattedlinesource.baseindentation.aspx
+			// This value is what VS uses, see: https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.text.formatting.iformattedlinesource.baseindentation
 			//	"This is generally a small value like 2.0, so that some characters (such as an italic
 			//	 slash) will not be clipped by the left edge of the view."
 			const double baseIndent = 2.0;
@@ -488,7 +487,7 @@ namespace dnSpy.Text.Editor {
 		}
 
 		public new Brush Background {
-			get { return base.Background; }
+			get => base.Background;
 			set {
 				if (base.Background != value) {
 					base.Background = value;
@@ -499,7 +498,7 @@ namespace dnSpy.Text.Editor {
 		}
 
 		public double ZoomLevel {
-			get { return zoomLevel; }
+			get => zoomLevel;
 			set {
 				if (IsClosed)
 					return;
@@ -542,7 +541,7 @@ namespace dnSpy.Text.Editor {
 		public double ViewportWidth => ActualWidth;
 		public double ViewportHeight => ActualHeight;
 		public double ViewportLeft {
-			get { return viewportLeft; }
+			get => viewportLeft;
 			set {
 				if (double.IsNaN(value))
 					throw new ArgumentOutOfRangeException(nameof(value));
@@ -923,8 +922,8 @@ namespace dnSpy.Text.Editor {
 			LineTransformProvider.GetLineTransform(line, yPosition, placement);
 
 		public event EventHandler<MouseHoverEventArgs> MouseHover {
-			add { mouseHoverHelper.MouseHover += value; }
-			remove { mouseHoverHelper.MouseHover -= value; }
+			add => mouseHoverHelper.MouseHover += value;
+			remove => mouseHoverHelper.MouseHover -= value;
 		}
 		readonly MouseHoverHelper mouseHoverHelper;
 

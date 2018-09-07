@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -17,83 +17,95 @@
     along with dnSpy.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System;
+using System.Threading;
 using dnSpy.Contracts.MVVM;
 
 namespace dnSpy.Decompiler.ILSpy.Core.Settings {
 	class ILSettings : ViewModelBase {
 		protected virtual void OnModified() { }
+		public event EventHandler SettingsVersionChanged;
+
+		void OptionsChanged() {
+			Interlocked.Increment(ref settingsVersion);
+			OnModified();
+			SettingsVersionChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		public int SettingsVersion => settingsVersion;
+		volatile int settingsVersion;
 
 		public bool ShowILComments {
-			get { return showILComments; }
+			get => showILComments;
 			set {
 				if (showILComments != value) {
 					showILComments = value;
 					OnPropertyChanged(nameof(ShowILComments));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
 		bool showILComments = false;
 
 		public bool ShowXmlDocumentation {
-			get { return showXmlDocumentation; }
+			get => showXmlDocumentation;
 			set {
 				if (showXmlDocumentation != value) {
 					showXmlDocumentation = value;
 					OnPropertyChanged(nameof(ShowXmlDocumentation));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
 		bool showXmlDocumentation = true;
 
 		public bool ShowTokenAndRvaComments {
-			get { return showTokenAndRvaComments; }
+			get => showTokenAndRvaComments;
 			set {
 				if (showTokenAndRvaComments != value) {
 					showTokenAndRvaComments = value;
 					OnPropertyChanged(nameof(ShowTokenAndRvaComments));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
 		bool showTokenAndRvaComments = true;
 
 		public bool ShowILBytes {
-			get { return showILBytes; }
+			get => showILBytes;
 			set {
 				if (showILBytes != value) {
 					showILBytes = value;
 					OnPropertyChanged(nameof(ShowILBytes));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
 		bool showILBytes = true;
 
 		public bool SortMembers {
-			get { return sortMembers; }
+			get => sortMembers;
 			set {
 				if (sortMembers != value) {
 					sortMembers = value;
 					OnPropertyChanged(nameof(SortMembers));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
-		bool sortMembers = true;
+		bool sortMembers = false;
 
 		public bool ShowPdbInfo {
-			get { return showPdbInfo; }
+			get => showPdbInfo;
 			set {
 				if (showPdbInfo != value) {
 					showPdbInfo = value;
 					OnPropertyChanged(nameof(ShowPdbInfo));
-					OnModified();
+					OptionsChanged();
 				}
 			}
 		}
-		bool showPdbInfo = false;
+		bool showPdbInfo = true;
 
 		public ILSettings Clone() => CopyTo(new ILSettings());
 

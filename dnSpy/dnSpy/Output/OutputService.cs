@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -25,6 +25,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -34,6 +35,7 @@ using dnSpy.Contracts.MVVM;
 using dnSpy.Contracts.Output;
 using dnSpy.Contracts.Settings.AppearanceCategory;
 using dnSpy.Contracts.Text.Editor;
+using dnSpy.Contracts.Utilities;
 using dnSpy.Output.Settings;
 using dnSpy.Properties;
 using dnSpy.Text.Editor;
@@ -64,8 +66,12 @@ namespace dnSpy.Output {
 		public ICommand ClearAllCommand => new RelayCommand(a => ClearAll(), a => CanClearAll);
 		public ICommand SaveCommand => new RelayCommand(a => SaveText(), a => CanSaveText);
 
+		public string ClearAllToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Resources.Output_ClearAll_ToolTip, dnSpy_Resources.ShortCutKeyCtrlL);
+		public string SaveToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Resources.Output_Save_ToolTip, dnSpy_Resources.ShortCutKeyCtrlS);
+		public string WordWrapToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Resources.Output_WordWrap_ToolTip, dnSpy_Resources.ShortCutKeyCtrlECtrlW);
+
 		public bool WordWrap {
-			get { return (outputWindowOptionsService.Default.WordWrapStyle & WordWrapStyles.WordWrap) != 0; }
+			get => (outputWindowOptionsService.Default.WordWrapStyle & WordWrapStyles.WordWrap) != 0;
 			set {
 				if (WordWrap != value) {
 					if (value)
@@ -77,13 +83,13 @@ namespace dnSpy.Output {
 		}
 
 		public bool ShowLineNumbers {
-			get { return outputWindowOptionsService.Default.LineNumberMargin; }
-			set { outputWindowOptionsService.Default.LineNumberMargin = value; }
+			get => outputWindowOptionsService.Default.LineNumberMargin;
+			set => outputWindowOptionsService.Default.LineNumberMargin = value;
 		}
 
 		public bool ShowTimestamps {
-			get { return outputWindowOptionsService.Default.ShowTimestamps; }
-			set { outputWindowOptionsService.Default.ShowTimestamps = value; }
+			get => outputWindowOptionsService.Default.ShowTimestamps;
+			set => outputWindowOptionsService.Default.ShowTimestamps = value;
 		}
 
 		public object TextEditorUIObject => SelectedOutputBufferVM?.TextEditorUIObject;
@@ -92,7 +98,7 @@ namespace dnSpy.Output {
 		public double ZoomLevel => SelectedOutputBufferVM?.ZoomLevel ?? 100;
 
 		public OutputBufferVM SelectedOutputBufferVM {
-			get { return selectedOutputBufferVM; }
+			get => selectedOutputBufferVM;
 			set {
 				if (selectedOutputBufferVM != value) {
 					selectedOutputBufferVM = value;
@@ -133,6 +139,7 @@ namespace dnSpy.Output {
 			Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() => {
 				foreach (var lazy in outputServiceListeners) {
 					var l = lazy.Value;
+					(l as IOutputServiceListener2)?.Initialize(this);
 				}
 			}));
 		}
@@ -197,8 +204,7 @@ namespace dnSpy.Output {
 
 		IEnumerable<GuidObject> CreateGuidObjects(GuidObjectsProviderArgs args) {
 			yield return new GuidObject(MenuConstants.GUIDOBJ_OUTPUT_SERVICE_GUID, this);
-			var vm = SelectedOutputBufferVM as IOutputTextPane;
-			if (vm != null)
+			if (SelectedOutputBufferVM is IOutputTextPane vm)
 				yield return new GuidObject(MenuConstants.GUIDOBJ_ACTIVE_OUTPUT_TEXTPANE_GUID, vm);
 		}
 
@@ -241,13 +247,13 @@ namespace dnSpy.Output {
 			if (filename == null)
 				return;
 			try {
-				File.WriteAllText(filename, vm.GetText());
+				File.WriteAllText(filename, vm.GetText(), Encoding.UTF8);
 			}
 			catch (Exception ex) {
 				MsgBox.Instance.Show(ex);
 			}
 		}
-		static readonly string TEXTFILES_FILTER = string.Format("{1} (*.txt)|*.txt|{0} (*.*)|*.*", dnSpy_Resources.AllFiles, dnSpy_Resources.TextFiles);
+		static readonly string TEXTFILES_FILTER = $"{dnSpy_Resources.TextFiles} (*.txt)|*.txt|{dnSpy_Resources.AllFiles} (*.*)|*.*";
 
 		string GetFilename(OutputBufferVM vm) {
 			// Same as VS2015

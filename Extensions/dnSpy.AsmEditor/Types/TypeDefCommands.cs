@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -57,9 +57,7 @@ namespace dnSpy.AsmEditor.Types {
 			readonly Lazy<IUndoCommandService> undoCommandService;
 
 			[ImportingConstructor]
-			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) {
-				this.undoCommandService = undoCommandService;
-			}
+			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteTypeDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteTypeDefCommand.Execute(undoCommandService, context.Nodes);
@@ -72,9 +70,7 @@ namespace dnSpy.AsmEditor.Types {
 
 			[ImportingConstructor]
 			EditMenuCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteTypeDefCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteTypeDefCommand.Execute(undoCommandService, context.Nodes);
@@ -87,9 +83,7 @@ namespace dnSpy.AsmEditor.Types {
 
 			[ImportingConstructor]
 			CodeCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsEnabled(CodeContext context) => context.IsDefinition && DeleteTypeDefCommand.CanExecute(context.Nodes);
 			public override void Execute(CodeContext context) => DeleteTypeDefCommand.Execute(undoCommandService, context.Nodes);
@@ -103,11 +97,10 @@ namespace dnSpy.AsmEditor.Types {
 			return string.Format(dnSpy_AsmEditor_Resources.DeleteTypesCommand, nodes.Length);
 		}
 
-		static bool CanExecute(DocumentTreeNodeData[] nodes) {
-			return nodes.Length > 0 &&
-				nodes.All(n => n is TypeNode) &&
-				FilterOutGlobalTypes(nodes).Length > 0;
-		}
+		static bool CanExecute(DocumentTreeNodeData[] nodes) =>
+			nodes.Length > 0 &&
+			nodes.All(n => n is TypeNode) &&
+			FilterOutGlobalTypes(nodes).Length > 0;
 
 		static DocumentTreeNodeData[] FilterOutGlobalTypes(DocumentTreeNodeData[] nodes) => nodes.Where(a => a is TypeNode && !((TypeNode)a).TypeDef.IsGlobalModuleType).ToArray();
 
@@ -125,7 +118,7 @@ namespace dnSpy.AsmEditor.Types {
 		struct DeleteModelNodes {
 			ModelInfo[] infos;
 
-			struct ModelInfo {
+			readonly struct ModelInfo {
 				public readonly IList<TypeDef> OwnerList;
 				public readonly int Index;
 
@@ -162,7 +155,7 @@ namespace dnSpy.AsmEditor.Types {
 
 				for (int i = infos.Length - 1; i >= 0; i--) {
 					var node = nodes[i];
-					var info = infos[i];
+					ref readonly var info = ref infos[i];
 					info.OwnerList.Insert(info.Index, node.TypeDef);
 				}
 
@@ -173,9 +166,7 @@ namespace dnSpy.AsmEditor.Types {
 		DeletableNodes<TypeNode> nodes;
 		DeleteModelNodes modelNodes;
 
-		DeleteTypeDefCommand(TypeNode[] asmNodes) {
-			nodes = new DeletableNodes<TypeNode>(asmNodes);
-		}
+		DeleteTypeDefCommand(TypeNode[] asmNodes) => nodes = new DeletableNodes<TypeNode>(asmNodes);
 
 		public string Description => dnSpy_AsmEditor_Resources.DeleteTypeCommand;
 
@@ -225,12 +216,11 @@ namespace dnSpy.AsmEditor.Types {
 			public override void Execute(AsmEditorContext context) => CreateTypeDefCommand.Execute(undoCommandService, appService, context.Nodes);
 		}
 
-		static bool CanExecute(DocumentTreeNodeData[] nodes) {
-			return nodes.Length == 1 &&
-				(nodes[0] is TypeNode ||
-				nodes[0] is NamespaceNode ||
-				nodes[0] is ModuleDocumentNode);
-		}
+		static bool CanExecute(DocumentTreeNodeData[] nodes) =>
+			nodes.Length == 1 &&
+			(nodes[0] is TypeNode ||
+			nodes[0] is NamespaceNode ||
+			nodes[0] is ModuleDocumentNode);
 
 		static void Execute(Lazy<IUndoCommandService> undoCommandService, IAppService appService, DocumentTreeNodeData[] nodes) {
 			if (!CanExecute(nodes))
@@ -338,11 +328,10 @@ namespace dnSpy.AsmEditor.Types {
 				this.appService = appService;
 			}
 
-			public override bool IsEnabled(CodeContext context) {
-				return context.IsDefinition &&
-					context.Nodes.Length == 1 &&
-					context.Nodes[0] is TypeNode;
-			}
+			public override bool IsEnabled(CodeContext context) =>
+				context.IsDefinition &&
+				context.Nodes.Length == 1 &&
+				context.Nodes[0] is TypeNode;
 
 			public override void Execute(CodeContext context) => CreateNestedTypeDefCommand.Execute(undoCommandService, appService, context.Nodes);
 		}
@@ -498,7 +487,7 @@ namespace dnSpy.AsmEditor.Types {
 		readonly bool nameChanged;
 		readonly TypeRefInfo[] typeRefInfos;
 
-		struct TypeRefInfo {
+		readonly struct TypeRefInfo {
 			public readonly TypeRef TypeRef;
 			public readonly UTF8String OrigNamespace;
 			public readonly UTF8String OrigName;
@@ -556,6 +545,7 @@ namespace dnSpy.AsmEditor.Types {
 				newOptions.CopyTo(typeNode.TypeDef, module);
 
 				origParentNode.TreeNode.AddChild(typeNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { typeNode });
 			}
 			else
 				newOptions.CopyTo(typeNode.TypeDef, module);
@@ -588,6 +578,7 @@ namespace dnSpy.AsmEditor.Types {
 
 				origOptions.CopyTo(typeNode.TypeDef, module);
 				origParentNode.TreeNode.Children.Insert(origParentChildIndex, typeNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { typeNode });
 			}
 			else
 				origOptions.CopyTo(typeNode.TypeDef, module);
@@ -601,7 +592,7 @@ namespace dnSpy.AsmEditor.Types {
 			InvalidateBaseTypeFolderNode(typeNode);
 		}
 
-		void InvalidateBaseTypeFolderNode(TypeNode typeNode) {
+		internal static void InvalidateBaseTypeFolderNode(TypeNode typeNode) {
 			var btNode = (BaseTypeFolderNode)typeNode.TreeNode.DataChildren.FirstOrDefault(a => a is BaseTypeFolderNode);
 			Debug.Assert(btNode != null || typeNode.TreeNode.Children.Count == 0);
 			if (btNode != null)

@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -73,9 +73,7 @@ namespace dnSpy.Text.Editor {
 		sealed class GuidObjectsProvider : IGuidObjectsProvider {
 			readonly ReplEditor replEditorUI;
 
-			public GuidObjectsProvider(ReplEditor replEditorUI) {
-				this.replEditorUI = replEditorUI;
-			}
+			public GuidObjectsProvider(ReplEditor replEditorUI) => this.replEditorUI = replEditorUI;
 
 			public IEnumerable<GuidObject> GetGuidObjects(GuidObjectsProviderArgs args) {
 				yield return new GuidObject(MenuConstants.GUIDOBJ_REPL_EDITOR_GUID, replEditorUI);
@@ -472,8 +470,8 @@ namespace dnSpy.Text.Editor {
 		}
 
 		public string SearchText {
-			get { return searchText ?? (searchText = CurrentInput); }
-			set { searchText = value; }
+			get => searchText ?? (searchText = CurrentInput);
+			set => searchText = value;
 		}
 		string searchText = string.Empty;
 
@@ -648,8 +646,8 @@ namespace dnSpy.Text.Editor {
 		}
 
 		public IReplCommandHandler CommandHandler {
-			get { return replCommandHandler ?? ReplCommandHandler.Null; }
-			set { replCommandHandler = value; }
+			get => replCommandHandler ?? ReplCommandHandler.Null;
+			set => replCommandHandler = value;
 		}
 		IReplCommandHandler replCommandHandler;
 
@@ -698,8 +696,15 @@ namespace dnSpy.Text.Editor {
 		bool IsExecMode => OffsetOfPrompt == null;
 
 		public string GetCode() {
-			int startOffset = 0;
-			int endOffset = wpfTextView.TextSnapshot.Length;
+			int startOffset, endOffset;
+			if (TextView.Selection.IsEmpty) {
+				startOffset = 0;
+				endOffset = wpfTextView.TextSnapshot.Length;
+			}
+			else {
+				startOffset = TextView.Selection.Start.Position;
+				endOffset = TextView.Selection.End.Position;
+			}
 			if (endOffset <= startOffset)
 				return string.Empty;
 
@@ -857,7 +862,7 @@ namespace dnSpy.Text.Editor {
 		}
 	}
 
-	struct CachedTextColorsCollectionBuilder {
+	readonly struct CachedTextColorsCollectionBuilder {
 		readonly ReplEditor owner;
 		readonly CachedTextColorsCollection cachedTextColorsCollection;
 		readonly int totalLength;
@@ -944,9 +949,7 @@ namespace dnSpy.Text.Editor {
 
 		public List<SpanAndClassificationType> ColorInfos { get; } = new List<SpanAndClassificationType>();
 
-		public ReplCommandInput(string input) {
-			Input = input;
-		}
+		public ReplCommandInput(string input) => Input = input;
 
 		public void AddClassification(int offset, int length, IClassificationType classificationType) {
 #if DEBUG
@@ -963,7 +966,7 @@ namespace dnSpy.Text.Editor {
 #endif
 	}
 
-	struct SpanAndClassificationType {
+	readonly struct SpanAndClassificationType {
 		public int Offset { get; }
 		public int Length { get; }
 		public IClassificationType ClassificationType { get; }
@@ -986,11 +989,9 @@ namespace dnSpy.Text.Editor {
 		readonly IReplEditor2 replEditor;
 
 		public ReplCustomLineNumberMarginOwner(IReplEditor2 replEditor, IThemeClassificationTypeService themeClassificationTypeService) {
-			if (replEditor == null)
-				throw new ArgumentNullException(nameof(replEditor));
 			if (themeClassificationTypeService == null)
 				throw new ArgumentNullException(nameof(themeClassificationTypeService));
-			this.replEditor = replEditor;
+			this.replEditor = replEditor ?? throw new ArgumentNullException(nameof(replEditor));
 			replLineNumberInput1ClassificationType = themeClassificationTypeService.GetClassificationType(TextColor.ReplLineNumberInput1);
 			replLineNumberInput2ClassificationType = themeClassificationTypeService.GetClassificationType(TextColor.ReplLineNumberInput2);
 			replLineNumberOutputClassificationType = themeClassificationTypeService.GetClassificationType(TextColor.ReplLineNumberOutput);

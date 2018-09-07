@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -73,6 +73,7 @@ namespace dnSpy.Decompiler.ILSpy.Settings {
 			OneCustomAttributePerLine = sect.Attribute<bool?>(nameof(OneCustomAttributePerLine)) ?? OneCustomAttributePerLine;
 			TypeAddInternalModifier = sect.Attribute<bool?>(nameof(TypeAddInternalModifier)) ?? TypeAddInternalModifier;
 			MemberAddPrivateModifier = sect.Attribute<bool?>(nameof(MemberAddPrivateModifier)) ?? MemberAddPrivateModifier;
+			//RemoveNewDelegateClass = sect.Attribute<bool?>(nameof(RemoveNewDelegateClass)) ?? RemoveNewDelegateClass;
 			//TODO: CSharpFormattingOptions
 			disableSave = false;
 		}
@@ -121,6 +122,7 @@ namespace dnSpy.Decompiler.ILSpy.Settings {
 			sect.Attribute(nameof(OneCustomAttributePerLine), OneCustomAttributePerLine);
 			sect.Attribute(nameof(TypeAddInternalModifier), TypeAddInternalModifier);
 			sect.Attribute(nameof(MemberAddPrivateModifier), MemberAddPrivateModifier);
+			//sect.Attribute(nameof(RemoveNewDelegateClass), RemoveNewDelegateClass);
 			//TODO: CSharpFormattingOptions
 		}
 	}

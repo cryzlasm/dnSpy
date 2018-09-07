@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -56,7 +56,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		public ICommand EditOtherCommand => new RelayCommand(a => EditOther(a), a => EditOtherCanExecute(a));
 
 		public InstructionOperandType InstructionOperandType {
-			get { return operandType; }
+			get => operandType;
 			set {
 				if (operandType != value) {
 					operandType = value;
@@ -242,7 +242,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 		public StringVM String { get; }
 
 		public object Other {
-			get { return other; }
+			get => other;
 			set {
 				if (other != value) {
 					other = value;
@@ -254,8 +254,8 @@ namespace dnSpy.AsmEditor.MethodBody {
 		object other;
 
 		public object OperandListItem {
-			get { return OperandListVM.SelectedItem; }
-			set { OperandListVM.SelectedItem = value; }
+			get => OperandListVM.SelectedItem;
+			set => OperandListVM.SelectedItem = value;
 		}
 
 		public ListVM<object> OperandListVM { get; }
@@ -386,20 +386,16 @@ namespace dnSpy.AsmEditor.MethodBody {
 		object Import(ModuleDef ownerModule, object o) {
 			var importer = new Importer(ownerModule, ImporterOptions.TryToUseDefs);
 
-			var tdr = o as ITypeDefOrRef;
-			if (tdr != null)
+			if (o is ITypeDefOrRef tdr)
 				return importer.Import(tdr);
 
-			var method = o as IMethod;
-			if (method != null && method.IsMethod)
+			if (o is IMethod method && method.IsMethod)
 				return importer.Import(method);
 
-			var field = o as IField;
-			if (field != null && field.IsField)
+			if (o is IField field && field.IsField)
 				return importer.Import(field);
 
-			var msig = o as MethodSig;
-			if (msig != null)
+			if (o is MethodSig msig)
 				return importer.Import(msig);
 
 			Debug.Assert(o == null);
@@ -426,8 +422,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 					if (Other != null) {
 						if (!(Other is IField))
 							return dnSpy_AsmEditor_Resources.Error_OpMustBeField;
-						var method = Other as IMethod;
-						if (method != null && method.MethodSig != null)
+						if (Other is IMethod method && method.MethodSig != null)
 							return dnSpy_AsmEditor_Resources.Error_OpMustBeField;
 					}
 					break;
@@ -436,8 +431,7 @@ namespace dnSpy.AsmEditor.MethodBody {
 					if (Other != null) {
 						if (!(Other is IMethod))
 							return dnSpy_AsmEditor_Resources.Error_OpMustBeMethod;
-						var field = Other as IField;
-						if (field != null && field.FieldSig != null)
+						if (Other is IField field && field.FieldSig != null)
 							return dnSpy_AsmEditor_Resources.Error_OpMustBeMethod;
 					}
 					break;

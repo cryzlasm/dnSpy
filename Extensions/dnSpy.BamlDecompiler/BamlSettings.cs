@@ -36,7 +36,7 @@ namespace dnSpy.BamlDecompiler {
 		protected virtual void OnModified() { }
 
 		public bool DisassembleBaml {
-			get { return disassembleBaml; }
+			get => disassembleBaml;
 			set {
 				if (disassembleBaml != value) {
 					disassembleBaml = value;
@@ -48,7 +48,7 @@ namespace dnSpy.BamlDecompiler {
 		bool disassembleBaml = false;
 
 		public bool UseTabs {
-			get { return useTabs; }
+			get => useTabs;
 			set {
 				if (useTabs != value) {
 					useTabs = value;
@@ -60,7 +60,7 @@ namespace dnSpy.BamlDecompiler {
 		bool useTabs = true;
 
 		public bool NewLineOnAttributes {
-			get { return newLineOnAttributes; }
+			get => newLineOnAttributes;
 			set {
 				if (newLineOnAttributes != value) {
 					newLineOnAttributes = value;
@@ -115,9 +115,7 @@ namespace dnSpy.BamlDecompiler {
 		readonly BamlSettingsImpl bamlSettings;
 
 		[ImportingConstructor]
-		BamlSettingsPageProvider(BamlSettingsImpl bamlSettings) {
-			this.bamlSettings = bamlSettings;
-		}
+		BamlSettingsPageProvider(BamlSettingsImpl bamlSettings) => this.bamlSettings = bamlSettings;
 
 		public IEnumerable<AppSettingsPage> Create() {
 			yield return new BamlAppSettingsPage(bamlSettings);

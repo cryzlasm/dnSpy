@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -38,7 +38,7 @@ namespace dnSpy.Hex.Editor {
 		const double INACTIVE_CARET_HEIGHT = 2.0;
 
 		public HexColumnType ActiveColumn {
-			get { return activeColumn; }
+			get => activeColumn;
 			set {
 				if (value != HexColumnType.Values && value != HexColumnType.Ascii)
 					throw new ArgumentOutOfRangeException(nameof(value));
@@ -51,7 +51,7 @@ namespace dnSpy.Hex.Editor {
 		HexColumnType activeColumn;
 
 		public bool IsValuesCaretPresent {
-			get { return isValuesCaretPresent; }
+			get => isValuesCaretPresent;
 			set {
 				if (isValuesCaretPresent != value) {
 					isValuesCaretPresent = value;
@@ -62,7 +62,7 @@ namespace dnSpy.Hex.Editor {
 		bool isValuesCaretPresent;
 
 		public bool IsAsciiCaretPresent {
-			get { return isAsciiCaretPresent; }
+			get => isAsciiCaretPresent;
 			set {
 				if (isAsciiCaretPresent != value) {
 					isAsciiCaretPresent = value;
@@ -85,7 +85,7 @@ namespace dnSpy.Hex.Editor {
 		DispatcherTimer dispatcherTimer;
 
 		public bool OverwriteMode {
-			get { return overwriteMode; }
+			get => overwriteMode;
 			set {
 				if (overwriteMode != value) {
 					overwriteMode = value;
@@ -137,7 +137,7 @@ namespace dnSpy.Hex.Editor {
 		public double AsciiWidth => asciiCaretGeometry.Rect.Width;
 
 		public bool IsHidden {
-			get { return isHidden; }
+			get => isHidden;
 			set {
 				if (isHidden == value)
 					return;
@@ -159,18 +159,12 @@ namespace dnSpy.Hex.Editor {
 		readonly VSTC.IClassificationType inactiveCaretClassificationType;
 
 		public HexCaretLayer(HexCaretImpl hexCaret, HexAdornmentLayer layer, VSTC.IClassificationFormatMap classificationFormatMap, VSTC.IClassificationTypeRegistryService classificationTypeRegistryService) {
-			if (hexCaret == null)
-				throw new ArgumentNullException(nameof(hexCaret));
-			if (layer == null)
-				throw new ArgumentNullException(nameof(layer));
-			if (classificationFormatMap == null)
-				throw new ArgumentNullException(nameof(classificationFormatMap));
 			if (classificationTypeRegistryService == null)
 				throw new ArgumentNullException(nameof(classificationTypeRegistryService));
 			overwriteMode = true;
-			this.hexCaret = hexCaret;
-			this.layer = layer;
-			this.classificationFormatMap = classificationFormatMap;
+			this.hexCaret = hexCaret ?? throw new ArgumentNullException(nameof(hexCaret));
+			this.layer = layer ?? throw new ArgumentNullException(nameof(layer));
+			this.classificationFormatMap = classificationFormatMap ?? throw new ArgumentNullException(nameof(classificationFormatMap));
 			activeCaretClassificationType = classificationTypeRegistryService.GetClassificationType(CTC.ThemeClassificationTypeNames.HexCaret);
 			inactiveCaretClassificationType = classificationTypeRegistryService.GetClassificationType(CTC.ThemeClassificationTypeNames.HexInactiveCaret);
 			valuesCaretGeometry = new CaretGeometry();
@@ -211,12 +205,10 @@ namespace dnSpy.Hex.Editor {
 		void RemoveAdornment() => layer.RemoveAllAdornments();
 		void AddAdornment() => layer.AddAdornment(VSTE.AdornmentPositioningBehavior.OwnerControlled, (HexBufferSpan?)null, null, this, null);
 
-		struct SelectionState {
-			byte state;
+		readonly struct SelectionState {
+			readonly byte state;
 
-			public SelectionState(HexSelection selection) {
-				state = (byte)(selection.IsEmpty ? 1 : 0);
-			}
+			public SelectionState(HexSelection selection) => state = (byte)(selection.IsEmpty ? 1 : 0);
 
 			public bool Equals(SelectionState other) => state == other.state;
 		}

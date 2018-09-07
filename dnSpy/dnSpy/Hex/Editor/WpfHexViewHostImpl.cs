@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -27,6 +27,7 @@ using System.Windows.Threading;
 using dnSpy.Contracts.Hex.Editor;
 using dnSpy.Contracts.Hex.Editor.OptionsExtensionMethods;
 using dnSpy.Contracts.Hex.Operations;
+using dnSpy.Contracts.Themes;
 using VSTE = Microsoft.VisualStudio.Text.Editor;
 
 namespace dnSpy.Hex.Editor {
@@ -41,24 +42,24 @@ namespace dnSpy.Hex.Editor {
 		readonly WpfHexViewMargin[] containerMargins;
 		readonly Grid grid;
 		readonly HexEditorOperationsFactoryService editorOperationsFactoryService;
+		readonly IThemeService themeService;
 
-		public WpfHexViewHostImpl(WpfHexViewMarginProviderCollectionProvider wpfHexViewMarginProviderCollectionProvider, WpfHexView wpfHexView, HexEditorOperationsFactoryService editorOperationsFactoryService, bool setFocus) {
+		public WpfHexViewHostImpl(WpfHexViewMarginProviderCollectionProvider wpfHexViewMarginProviderCollectionProvider, WpfHexView wpfHexView, HexEditorOperationsFactoryService editorOperationsFactoryService, IThemeService themeService, bool setFocus) {
 			if (wpfHexViewMarginProviderCollectionProvider == null)
 				throw new ArgumentNullException(nameof(wpfHexViewMarginProviderCollectionProvider));
-			if (wpfHexView == null)
-				throw new ArgumentNullException(nameof(wpfHexView));
-			if (editorOperationsFactoryService == null)
-				throw new ArgumentNullException(nameof(editorOperationsFactoryService));
 			contentControl = new ContentControl();
-			this.editorOperationsFactoryService = editorOperationsFactoryService;
+			this.editorOperationsFactoryService = editorOperationsFactoryService ?? throw new ArgumentNullException(nameof(editorOperationsFactoryService));
+			this.themeService = themeService;
 			grid = CreateGrid();
-			HexView = wpfHexView;
+			HexView = wpfHexView ?? throw new ArgumentNullException(nameof(wpfHexView));
 			contentControl.Focusable = false;
 			contentControl.Content = grid;
 			contentControl.MouseWheel += ContentControl_MouseWheel;
 
-			UpdateBackground();
+			themeService.ThemeChanged += ThemeService_ThemeChanged;
 			HexView.BackgroundBrushChanged += HexView_BackgroundBrushChanged;
+			UpdateIsInContrastMode();
+			UpdateBackground();
 
 			containerMargins = new WpfHexViewMargin[5];
 			containerMargins[0] = CreateContainerMargin(wpfHexViewMarginProviderCollectionProvider, PredefinedHexMarginNames.Top, true, 0, 0, 3);
@@ -76,6 +77,11 @@ namespace dnSpy.Hex.Editor {
 				}));
 			}
 		}
+
+		void ThemeService_ThemeChanged(object sender, ThemeChangedEventArgs e) => UpdateIsInContrastMode();
+
+		void UpdateIsInContrastMode() =>
+			HexView.Options.GlobalOptions.SetOptionValue(DefaultHexViewHostOptions.IsInContrastModeId, themeService.Theme.IsHighContrast);
 
 		WpfHexViewMargin CreateContainerMargin(WpfHexViewMarginProviderCollectionProvider wpfHexViewMarginProviderCollectionProvider, string name, bool isHorizontal, int row, int column, int columnSpan) {
 			var margin = new WpfHexViewContainerMargin(wpfHexViewMarginProviderCollectionProvider, this, name, isHorizontal);
@@ -122,6 +128,7 @@ namespace dnSpy.Hex.Editor {
 			HexView.Close();
 			isClosed = true;
 			Closed?.Invoke(this, EventArgs.Empty);
+			themeService.ThemeChanged -= ThemeService_ThemeChanged;
 			HexView.BackgroundBrushChanged -= HexView_BackgroundBrushChanged;
 			foreach (var margin in containerMargins) {
 				margin.VisualElement.MouseDown -= Margin_VisualElement_MouseDown;
@@ -133,8 +140,7 @@ namespace dnSpy.Hex.Editor {
 			foreach (var margin in containerMargins) {
 				if (margin == null)
 					continue;
-				var result = margin.GetHexViewMargin(marginName) as WpfHexViewMargin;
-				if (result != null)
+				if (margin.GetHexViewMargin(marginName) is WpfHexViewMargin result)
 					return result;
 			}
 			return null;

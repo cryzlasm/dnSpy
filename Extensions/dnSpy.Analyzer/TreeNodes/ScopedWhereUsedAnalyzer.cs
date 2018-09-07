@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using dnlib.DotNet;
-using dnlib.Threading;
 using dnSpy.Contracts.Documents;
 
 namespace dnSpy.Analyzer.TreeNodes {
@@ -45,9 +44,7 @@ namespace dnSpy.Analyzer.TreeNodes {
 		}
 
 		public ScopedWhereUsedAnalyzer(IDsDocumentService documentService, MethodDef method, Func<TypeDef, IEnumerable<T>> typeAnalysisFunction)
-			: this(documentService, method.DeclaringType, typeAnalysisFunction) {
-			memberAccessibility = GetMethodAccessibility(method);
-		}
+			: this(documentService, method.DeclaringType, typeAnalysisFunction) => memberAccessibility = GetMethodAccessibility(method);
 
 		public ScopedWhereUsedAnalyzer(IDsDocumentService documentService, PropertyDef property, Func<TypeDef, IEnumerable<T>> typeAnalysisFunction)
 			: this(documentService, property.DeclaringType, typeAnalysisFunction) {
@@ -57,11 +54,10 @@ namespace dnSpy.Analyzer.TreeNodes {
 		}
 
 		public ScopedWhereUsedAnalyzer(IDsDocumentService documentService, EventDef eventDef, Func<TypeDef, IEnumerable<T>> typeAnalysisFunction)
-			: this(documentService, eventDef.DeclaringType, typeAnalysisFunction) {
+			: this(documentService, eventDef.DeclaringType, typeAnalysisFunction) =>
 			// we only have to check the accessibility of the the get method
 			// [CLS Rule 30: The accessibility of an event and of its accessors shall be identical.]
 			memberAccessibility = GetMethodAccessibility(eventDef.AddMethod);
-		}
 
 		public ScopedWhereUsedAnalyzer(IDsDocumentService documentService, FieldDef field, Func<TypeDef, IEnumerable<T>> typeAnalysisFunction)
 			: this(documentService, field.DeclaringType, typeAnalysisFunction) {
@@ -240,7 +236,7 @@ namespace dnSpy.Analyzer.TreeNodes {
 				yield return mod;
 				yield break;
 			}
-			foreach (var m in mod.Assembly.Modules.GetSafeEnumerable())
+			foreach (var m in mod.Assembly.Modules)
 				yield return m;
 
 			var assemblies = documentService.GetDocuments().Where(a => a.AssemblyDef != null);
@@ -248,14 +244,14 @@ namespace dnSpy.Analyzer.TreeNodes {
 			foreach (var assembly in assemblies) {
 				ct.ThrowIfCancellationRequested();
 				bool found = false;
-				foreach (var reference in assembly.AssemblyDef.Modules.GetSafeEnumerable().SelectMany(module => module.GetAssemblyRefs())) {
+				foreach (var reference in assembly.AssemblyDef.Modules.SelectMany(module => module.GetAssemblyRefs())) {
 					if (AssemblyNameComparer.CompareAll.CompareTo(asm, reference) == 0) {
 						found = true;
 						break;
 					}
 				}
 				if (found && AssemblyReferencesScopeType(assembly.AssemblyDef)) {
-					foreach (var m in assembly.AssemblyDef.Modules.GetSafeEnumerable())
+					foreach (var m in assembly.AssemblyDef.Modules)
 						yield return m;
 				}
 			}
@@ -267,7 +263,7 @@ namespace dnSpy.Analyzer.TreeNodes {
 				yield return mod;
 				yield break;
 			}
-			foreach (var m in mod.Assembly.Modules.GetSafeEnumerable())
+			foreach (var m in mod.Assembly.Modules)
 				yield return m;
 
 			if (asm.HasCustomAttributes) {
@@ -290,7 +286,7 @@ namespace dnSpy.Analyzer.TreeNodes {
 					foreach (var assembly in assemblies) {
 						ct.ThrowIfCancellationRequested();
 						if (friendAssemblies.Contains(assembly.AssemblyDef.Name) && AssemblyReferencesScopeType(assembly.AssemblyDef)) {
-							foreach (var m in assembly.AssemblyDef.Modules.GetSafeEnumerable())
+							foreach (var m in assembly.AssemblyDef.Modules)
 								yield return m;
 						}
 					}
@@ -299,7 +295,7 @@ namespace dnSpy.Analyzer.TreeNodes {
 		}
 
 		bool AssemblyReferencesScopeType(AssemblyDef asm) {
-			foreach (var mod in asm.Modules.GetSafeEnumerable()) {
+			foreach (var mod in asm.Modules) {
 				foreach (var typeref in mod.GetTypeRefs()) {
 					if (new SigComparer().Equals(typeScope, typeref))
 						return true;

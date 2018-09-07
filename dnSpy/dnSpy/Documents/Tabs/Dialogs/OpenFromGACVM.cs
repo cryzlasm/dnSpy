@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Threading;
 using dnlib.DotNet;
+using dnSpy.Contracts.ETW;
 using dnSpy.Contracts.MVVM;
 using dnSpy.Contracts.Text.Classification;
 using dnSpy.Contracts.Utilities;
@@ -41,11 +42,13 @@ namespace dnSpy.Documents.Tabs.Dialogs {
 		public IClassificationFormatMap ClassificationFormatMap { get; }
 		public ITextElementProvider TextElementProvider { get; }
 
+		public string OpenGAC_Search_ToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Resources.OpenGAC_Search_ToolTip, dnSpy_Resources.ShortCutKeyCtrlF);
+
 		readonly ObservableCollection<GACFileVM> gacFileList;
 		readonly ListCollectionView collectionView;
 
 		public object SelectedItem {
-			get { return selectedItem; }
+			get => selectedItem;
 			set {
 				if (selectedItem != value) {
 					selectedItem = value;
@@ -56,7 +59,7 @@ namespace dnSpy.Documents.Tabs.Dialogs {
 		object selectedItem;
 
 		public bool SearchingGAC {
-			get { return searchingGAC; }
+			get => searchingGAC;
 			set {
 				if (searchingGAC != value) {
 					searchingGAC = value;
@@ -70,7 +73,7 @@ namespace dnSpy.Documents.Tabs.Dialogs {
 		public bool NotSearchingGAC => !SearchingGAC;
 
 		public string SearchText {
-			get { return searchText; }
+			get => searchText;
 			set {
 				if (searchText != value) {
 					searchText = value;
@@ -82,7 +85,7 @@ namespace dnSpy.Documents.Tabs.Dialogs {
 		string searchText;
 
 		public bool ShowDuplicates {
-			get { return showDuplicates; }
+			get => showDuplicates;
 			set {
 				if (showDuplicates != value) {
 					showDuplicates = value;
@@ -110,8 +113,10 @@ namespace dnSpy.Documents.Tabs.Dialogs {
 			uniqueFiles = new HashSet<GACFileVM>(new GACFileVM_EqualityComparer());
 
 			var dispatcher = Dispatcher.CurrentDispatcher;
+			DnSpyEventSource.Log.OpenFromGACStart();
 			Task.Factory.StartNew(() => new GACFileFinder(this, dispatcher, cancellationToken).Find(), cancellationToken)
 			.ContinueWith(t => {
+				DnSpyEventSource.Log.OpenFromGACStop();
 				var ex = t.Exception;
 				SearchingGAC = false;
 				Refilter();

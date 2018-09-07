@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -80,9 +80,7 @@ namespace dnSpy.AsmEditor.Resources {
 			readonly Lazy<IUndoCommandService> undoCommandService;
 
 			[ImportingConstructor]
-			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) {
-				this.undoCommandService = undoCommandService;
-			}
+			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteResourceCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteResourceCommand.Execute(undoCommandService, context.Nodes);
@@ -95,9 +93,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 			[ImportingConstructor]
 			EditMenuCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteResourceCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteResourceCommand.Execute(undoCommandService, context.Nodes);
@@ -110,9 +106,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 			[ImportingConstructor]
 			CodeCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsEnabled(CodeContext context) => context.IsDefinition && DeleteResourceCommand.CanExecute(context.Nodes);
 			public override void Execute(CodeContext context) => DeleteResourceCommand.Execute(undoCommandService, context.Nodes);
@@ -138,7 +132,7 @@ namespace dnSpy.AsmEditor.Resources {
 		struct DeleteModelNodes {
 			ModelInfo[] infos;
 
-			struct ModelInfo {
+			readonly struct ModelInfo {
 				public readonly ModuleDef OwnerModule;
 				public readonly int Index;
 
@@ -181,7 +175,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 				for (int i = infos.Length - 1; i >= 0; i--) {
 					var node = nodes[i];
-					var info = infos[i];
+					ref readonly var info = ref infos[i];
 					info.OwnerModule.Resources.Insert(info.Index, node.Resource);
 				}
 
@@ -192,9 +186,7 @@ namespace dnSpy.AsmEditor.Resources {
 		DeletableNodes<ResourceNode> nodes;
 		DeleteModelNodes modelNodes;
 
-		DeleteResourceCommand(ResourceNode[] rsrcNodes) {
-			nodes = new DeletableNodes<ResourceNode>(rsrcNodes);
-		}
+		DeleteResourceCommand(ResourceNode[] rsrcNodes) => nodes = new DeletableNodes<ResourceNode>(rsrcNodes);
 
 		public string Description => dnSpy_AsmEditor_Resources.DeleteResourceCommand;
 
@@ -218,9 +210,7 @@ namespace dnSpy.AsmEditor.Resources {
 			readonly Lazy<IUndoCommandService> undoCommandService;
 
 			[ImportingConstructor]
-			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) {
-				this.undoCommandService = undoCommandService;
-			}
+			DocumentsCommand(Lazy<IUndoCommandService> undoCommandService) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteResourceElementCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteResourceElementCommand.Execute(undoCommandService, context.Nodes);
@@ -233,9 +223,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 			[ImportingConstructor]
 			EditMenuCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsVisible(AsmEditorContext context) => DeleteResourceElementCommand.CanExecute(context.Nodes);
 			public override void Execute(AsmEditorContext context) => DeleteResourceElementCommand.Execute(undoCommandService, context.Nodes);
@@ -248,9 +236,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 			[ImportingConstructor]
 			CodeCommand(Lazy<IUndoCommandService> undoCommandService, IDocumentTreeView documentTreeView)
-				: base(documentTreeView) {
-				this.undoCommandService = undoCommandService;
-			}
+				: base(documentTreeView) => this.undoCommandService = undoCommandService;
 
 			public override bool IsEnabled(CodeContext context) => context.IsDefinition && DeleteResourceElementCommand.CanExecute(context.Nodes);
 			public override void Execute(CodeContext context) => DeleteResourceElementCommand.Execute(undoCommandService, context.Nodes);
@@ -281,14 +267,10 @@ namespace dnSpy.AsmEditor.Resources {
 			Resource NewResource;
 
 			public ModuleInfo(ResourceElementSetNode node) {
-				if (node == null)
-					throw new InvalidOperationException();
-				Node = node;
+				Node = node ?? throw new InvalidOperationException();
 				var module = node.GetModule();
 				Debug.Assert(module != null);
-				if (module == null)
-					throw new InvalidOperationException();
-				Module = module;
+				Module = module ?? throw new InvalidOperationException();
 				Index = module.Resources.IndexOf(node.Resource);
 				Debug.Assert(Index >= 0);
 				if (Index < 0)
@@ -317,9 +299,7 @@ namespace dnSpy.AsmEditor.Resources {
 		DeletableNodes<ResourceElementNode> nodes;
 		readonly List<ModuleInfo> savedResources = new List<ModuleInfo>();
 
-		DeleteResourceElementCommand(ResourceElementNode[] rsrcNodes) {
-			nodes = new DeletableNodes<ResourceElementNode>(rsrcNodes);
-		}
+		DeleteResourceElementCommand(ResourceElementNode[] rsrcNodes) => nodes = new DeletableNodes<ResourceElementNode>(rsrcNodes);
 
 		public string Description => dnSpy_AsmEditor_Resources.DeleteResourceCommand;
 
@@ -512,8 +492,7 @@ namespace dnSpy.AsmEditor.Resources {
 		public static ResourcesFolderNode GetResourceListTreeNode(DocumentTreeNodeData[] nodes) {
 			if (nodes.Length != 1)
 				return null;
-			var rsrcListNode = nodes[0] as ResourcesFolderNode;
-			if (rsrcListNode != null)
+			if (nodes[0] is ResourcesFolderNode rsrcListNode)
 				return rsrcListNode;
 			rsrcListNode = nodes[0].TreeNode.Parent?.Data as ResourcesFolderNode;
 			if (rsrcListNode != null)
@@ -969,7 +948,7 @@ namespace dnSpy.AsmEditor.Resources {
 				ResourceType = ResourceType.Linked,
 				Name = "filelinked",
 				Attributes = ManifestResourceAttributes.Public,
-				File = new FileDefUser("somefile", dnlib.DotNet.FileAttributes.ContainsNoMetaData, Array.Empty<byte>()),
+				File = new FileDefUser("somefile", dnlib.DotNet.FileAttributes.ContainsNoMetadata, Array.Empty<byte>()),
 			};
 			var data = new ResourceVM(options, module);
 			var win = new ResourceDlg();
@@ -1099,6 +1078,7 @@ namespace dnSpy.AsmEditor.Resources {
 				newOptions.CopyTo(rsrcNode.Resource);
 
 				origParentNode.TreeNode.AddChild(rsrcNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { rsrcNode });
 			}
 			else
 				newOptions.CopyTo(rsrcNode.Resource);
@@ -1114,6 +1094,7 @@ namespace dnSpy.AsmEditor.Resources {
 
 				origOptions.CopyTo(rsrcNode.Resource);
 				origParentNode.TreeNode.Children.Insert(origParentChildIndex, rsrcNode.TreeNode);
+				origParentNode.TreeNode.TreeView.SelectItems(new[] { rsrcNode });
 			}
 			else
 				origOptions.CopyTo(rsrcNode.Resource);

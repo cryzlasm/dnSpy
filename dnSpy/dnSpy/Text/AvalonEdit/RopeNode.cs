@@ -44,9 +44,7 @@ namespace dnSpy.Text.AvalonEdit {
 		// The character data. Only non-null for leaf nodes (height=0) that aren't function nodes.
 		internal T[] contents;
 
-		internal int Balance {
-			get { return right.height - left.height; }
-		}
+		internal int Balance => right.height - left.height;
 
 		[Conditional("DATACONSISTENCYTEST")]
 		internal void CheckInvariants() {
@@ -544,9 +542,7 @@ namespace dnSpy.Text.AvalonEdit {
 		/// Such nodes are always marked as shared.
 		/// GetContentNode() will return either a Concat or Leaf node, never another FunctionNode.
 		/// </summary>
-		internal virtual RopeNode<T> GetContentNode() {
-			throw new InvalidOperationException("Called GetContentNode() on non-FunctionNode.");
-		}
+		internal virtual RopeNode<T> GetContentNode() => throw new InvalidOperationException("Called GetContentNode() on non-FunctionNode.");
 	}
 
 	sealed class FunctionNode<T> : RopeNode<T> {
@@ -607,9 +603,7 @@ namespace dnSpy.Text.AvalonEdit {
 			}
 		}
 
-		public override string ToString() {
-			return "[FunctionNode length=" + length + " initializerRan=" + (initializer == null) + "]";
-		}
+		public override string ToString() => "[FunctionNode length=" + length + " initializerRan=" + (initializer == null) + "]";
 #endif
 	}
 }

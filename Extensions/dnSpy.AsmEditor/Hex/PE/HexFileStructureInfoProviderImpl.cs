@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -36,9 +36,7 @@ namespace dnSpy.AsmEditor.Hex.PE {
 		readonly PEStructureProviderFactory peStructureProviderFactory;
 
 		[ImportingConstructor]
-		HexFileStructureInfoProviderFactoryImpl(PEStructureProviderFactory peStructureProviderFactory) {
-			this.peStructureProviderFactory = peStructureProviderFactory;
-		}
+		HexFileStructureInfoProviderFactoryImpl(PEStructureProviderFactory peStructureProviderFactory) => this.peStructureProviderFactory = peStructureProviderFactory;
 
 		public override HexFileStructureInfoProvider Create(HexView hexView) =>
 			new HexFileStructureInfoProviderImpl(peStructureProviderFactory);
@@ -47,11 +45,7 @@ namespace dnSpy.AsmEditor.Hex.PE {
 	sealed class HexFileStructureInfoProviderImpl : HexFileStructureInfoProvider {
 		readonly PEStructureProviderFactory peStructureProviderFactory;
 
-		public HexFileStructureInfoProviderImpl(PEStructureProviderFactory peStructureProviderFactory) {
-			if (peStructureProviderFactory == null)
-				throw new ArgumentNullException(nameof(peStructureProviderFactory));
-			this.peStructureProviderFactory = peStructureProviderFactory;
-		}
+		public HexFileStructureInfoProviderImpl(PEStructureProviderFactory peStructureProviderFactory) => this.peStructureProviderFactory = peStructureProviderFactory ?? throw new ArgumentNullException(nameof(peStructureProviderFactory));
 
 		sealed class PEStructure {
 			readonly PEStructureProvider peStructureProvider;
@@ -59,8 +53,7 @@ namespace dnSpy.AsmEditor.Hex.PE {
 			readonly HexSpan metadataTablesSpan;
 
 			public static PEStructure TryCreate(PEStructureProviderFactory peStructureProviderFactory, HexBufferFile file) {
-				PEStructure peStructure;
-				if (file.Properties.TryGetProperty(typeof(PEStructure), out peStructure))
+				if (file.Properties.TryGetProperty(typeof(PEStructure), out PEStructure peStructure))
 					return peStructure;
 
 				var provider = peStructureProviderFactory.TryGetProvider(file);
@@ -93,8 +86,8 @@ namespace dnSpy.AsmEditor.Hex.PE {
 
 				var tblsStream = peStructureProvider.TablesStream;
 				if (tblsStream != null) {
-					var first = tblsStream.MetaDataTables.FirstOrDefault(a => a != null);
-					var last = tblsStream.MetaDataTables.LastOrDefault(a => a != null);
+					var first = tblsStream.MetadataTables.FirstOrDefault(a => a != null);
+					var last = tblsStream.MetadataTables.LastOrDefault(a => a != null);
 					Debug.Assert(first != null);
 					if (first != null)
 						metadataTablesSpan = HexSpan.FromBounds(first.Span.Start, last.Span.End);
@@ -111,7 +104,7 @@ namespace dnSpy.AsmEditor.Hex.PE {
 					}
 				}
 				if (metadataTablesSpan.Contains(position)) {
-					foreach (var mdTbl in peStructureProvider.TablesStream.MetaDataTables) {
+					foreach (var mdTbl in peStructureProvider.TablesStream.MetadataTables) {
 						if (mdTbl == null || !mdTbl.Span.Contains(position))
 							continue;
 						var offset = position - mdTbl.Span.Start;
@@ -133,16 +126,12 @@ namespace dnSpy.AsmEditor.Hex.PE {
 			}
 		}
 
-		struct FieldAndStructure {
+		readonly struct FieldAndStructure {
 			public HexVM Structure { get; }
 			public HexField Field { get; }
 			public FieldAndStructure(HexVM structure, HexField field) {
-				if (structure == null)
-					throw new ArgumentNullException(nameof(structure));
-				if (field == null)
-					throw new ArgumentNullException(nameof(field));
-				Structure = structure;
-				Field = field;
+				Structure = structure ?? throw new ArgumentNullException(nameof(structure));
+				Field = field ?? throw new ArgumentNullException(nameof(field));
 			}
 		}
 
@@ -159,8 +148,7 @@ namespace dnSpy.AsmEditor.Hex.PE {
 		}
 
 		public override HexIndexes[] GetSubStructureIndexes(HexBufferFile file, ComplexData structure, HexPosition position) {
-			var sections = structure as PeSectionsData;
-			if (sections != null)
+			if (structure is PeSectionsData sections)
 				return Array.Empty<HexIndexes>();
 
 			return null;

@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -45,7 +45,7 @@ namespace dnSpy.Settings.Fonts {
 		readonly Dictionary<string, ISettingsSection> toThemeFontSettingsSection;
 		readonly Dictionary<FontSettingsKey, ISettingsSection> toFontSettingsSection;
 
-		struct FontSettingsKey : IEquatable<FontSettingsKey> {
+		readonly struct FontSettingsKey : IEquatable<FontSettingsKey> {
 			readonly string name;
 			readonly Guid themeGuid;
 			public FontSettingsKey(string name, Guid themeGuid) {
@@ -113,14 +113,12 @@ namespace dnSpy.Settings.Fonts {
 		}
 
 		ISettingsSection TryGetThemeFontSettingsSection(string name) {
-			ISettingsSection section;
-			toThemeFontSettingsSection.TryGetValue(name, out section);
+			toThemeFontSettingsSection.TryGetValue(name, out var section);
 			return section;
 		}
 
 		ISettingsSection TryGetThemeFontSettingsSection(string name, Guid themeGuid) {
-			ISettingsSection section;
-			toFontSettingsSection.TryGetValue(new FontSettingsKey(name, themeGuid), out section);
+			toFontSettingsSection.TryGetValue(new FontSettingsKey(name, themeGuid), out var section);
 			return section;
 		}
 

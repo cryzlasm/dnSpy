@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -35,8 +35,9 @@ using dnSpy.Contracts.Scripting.Roslyn;
 using dnSpy.Contracts.Text;
 using dnSpy.Contracts.Text.Classification;
 using dnSpy.Contracts.Text.Editor;
-using dnSpy.Roslyn.Shared.Text;
-using dnSpy.Roslyn.Shared.Text.Classification;
+using dnSpy.Contracts.Utilities;
+using dnSpy.Roslyn.Text;
+using dnSpy.Roslyn.Text.Classification;
 using dnSpy.Scripting.Roslyn.Properties;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
@@ -57,12 +58,19 @@ namespace dnSpy.Scripting.Roslyn.Common {
 	abstract class ScriptControlVM : ViewModelBase, IReplCommandHandler, IScriptGlobalsHelper {
 		internal const string CMD_PREFIX = "#";
 
-		static readonly string TEXTFILES_FILTER = string.Format("{1} (*.txt)|*.txt|{0} (*.*)|*.*", dnSpy_Scripting_Roslyn_Resources.AllFiles, dnSpy_Scripting_Roslyn_Resources.TextFiles);
+		static readonly string TEXTFILES_FILTER = $"{dnSpy_Scripting_Roslyn_Resources.TextFiles} (*.txt)|*.txt|{dnSpy_Scripting_Roslyn_Resources.AllFiles} (*.*)|*.*";
 
 		protected abstract string TextFilenameNoExtension { get; }
 		protected abstract string CodeFilenameNoExtension { get; }
 		protected abstract string CodeFileExtension { get; }
 		protected abstract string CodeFilterText { get; }
+
+		public string ResetToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Script_ToolTip_Reset, null);
+		public string ClearScreenToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Script_ToolTip_ClearScreen, dnSpy_Scripting_Roslyn_Resources.ShortCutKeyCtrlL);
+		public string HistoryPreviousToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Script_ToolTip_HistoryPrevious, dnSpy_Scripting_Roslyn_Resources.ShortCutKeyAltUp);
+		public string HistoryNextToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Script_ToolTip_HistoryNext, dnSpy_Scripting_Roslyn_Resources.ShortCutKeyAltDown);
+		public string SaveToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Repl_Save_ToolTip, dnSpy_Scripting_Roslyn_Resources.ShortCutKeyCtrlS);
+		public string WordWrapToolTip => ToolTipHelper.AddKeyboardShortcut(dnSpy_Scripting_Roslyn_Resources.Repl_WordWrap_ToolTip, dnSpy_Scripting_Roslyn_Resources.ShortCutKeyCtrlECtrlW);
 
 		public ICommand ResetCommand => new RelayCommand(a => Reset(), a => CanReset);
 		public ICommand ClearCommand => new RelayCommand(a => ReplEditor.ClearScreen(), a => ReplEditor.CanClearScreen);
@@ -99,7 +107,7 @@ namespace dnSpy.Scripting.Roslyn.Common {
 		bool isResetting;
 
 		public bool WordWrap {
-			get { return (ReplEditor.TextView.Options.WordWrapStyle() & WordWrapStyles.WordWrap) != 0; }
+			get => (ReplEditor.TextView.Options.WordWrapStyle() & WordWrapStyles.WordWrap) != 0;
 			set {
 				if (value)
 					WordWrapStyle |= WordWrapStyles.WordWrap;
@@ -109,7 +117,7 @@ namespace dnSpy.Scripting.Roslyn.Common {
 		}
 
 		WordWrapStyles WordWrapStyle {
-			get { return ReplEditor.TextView.Options.WordWrapStyle(); }
+			get => ReplEditor.TextView.Options.WordWrapStyle();
 			set {
 				var oldWordWrapStyle = WordWrapStyle;
 				if (value == oldWordWrapStyle)
@@ -123,7 +131,7 @@ namespace dnSpy.Scripting.Roslyn.Common {
 		}
 
 		bool ShowLineNumbers {
-			get { return ReplEditor.TextView.Options.IsLineNumberMarginEnabled(); }
+			get => ReplEditor.TextView.Options.IsLineNumberMarginEnabled();
 			set {
 				if (ShowLineNumbers == value)
 					return;
@@ -330,8 +338,8 @@ namespace dnSpy.Scripting.Roslyn.Common {
 
 			using (var workspace = new AdhocWorkspace(RoslynMefHostServices.DefaultServices)) {
 				var classifier = new RoslynClassifier(sem.SyntaxTree.GetRoot(), sem, workspace, roslynClassificationTypes, defaultClassificationType, cancellationToken);
-				foreach (var info in classifier.GetClassifications(new TextSpan(0, command.Input.Length)))
-					command.AddClassification(info.Span.Start, info.Span.Length, info.Type);
+				foreach (var info in classifier.GetColors(new TextSpan(0, command.Input.Length)))
+					command.AddClassification(info.Span.Start, info.Span.Length, (IClassificationType)info.Color);
 			}
 
 			return Task.CompletedTask;
@@ -410,8 +418,7 @@ namespace dnSpy.Scripting.Roslyn.Common {
 							execState.Executing = false;
 					}
 					var innerEx = t.Exception?.InnerException;
-					if (innerEx is CompilationErrorException) {
-						var cee = (CompilationErrorException)innerEx;
+					if (innerEx is CompilationErrorException cee) {
 						PrintDiagnostics(cee.Diagnostics);
 						CommandExecuted();
 					}
@@ -464,13 +471,10 @@ namespace dnSpy.Scripting.Roslyn.Common {
 		}
 
 		ExecScriptCommandState ParseScriptCommand(string input) {
-			string name;
-			string[] args;
-			if (!UnpackScriptCommand(input, out name, out args))
+			if (!UnpackScriptCommand(input, out string name, out var args))
 				return null;
 
-			IScriptCommand sc;
-			if (!toScriptCommand.TryGetValue(name, out sc))
+			if (!toScriptCommand.TryGetValue(name, out var sc))
 				return null;
 
 			return new ExecScriptCommandState(sc, args);

@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -30,12 +30,11 @@ namespace dnSpy.Tabs {
 		readonly ITabContent tabContent;
 
 		public bool IsActive {
-			get { return isActive; }
+			get => isActive;
 			set {
 				if (isActive != value) {
 					isActive = value;
-					var hdr = Header as TheHeader;
-					if (hdr != null)
+					if (Header is TheHeader hdr)
 						hdr.IsActiveChanged();
 				}
 			}
@@ -46,7 +45,7 @@ namespace dnSpy.Tabs {
 			readonly TabItemImpl impl;
 
 			public bool IsSelected {
-				get { return isSelected; }
+				get => isSelected;
 				set {
 					if (isSelected != value) {
 						isSelected = value;
@@ -77,8 +76,8 @@ namespace dnSpy.Tabs {
 		}
 
 		internal TabGroup Owner {
-			get { return tabGroup; }
-			set { tabGroup = value; }
+			get => tabGroup;
+			set => tabGroup = value;
 		}
 		TabGroup tabGroup;
 
@@ -137,14 +136,12 @@ namespace dnSpy.Tabs {
 		}
 
 		void AddEvents() {
-			var npc = tabContent as INotifyPropertyChanged;
-			if (npc != null)
+			if (tabContent is INotifyPropertyChanged npc)
 				npc.PropertyChanged += TabContent_PropertyChanged;
 		}
 
 		void RemoveEvents() {
-			var npc = tabContent as INotifyPropertyChanged;
-			if (npc != null)
+			if (tabContent is INotifyPropertyChanged npc)
 				npc.PropertyChanged -= TabContent_PropertyChanged;
 		}
 

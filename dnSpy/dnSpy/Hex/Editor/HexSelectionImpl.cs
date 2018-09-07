@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -35,12 +35,12 @@ namespace dnSpy.Hex.Editor {
 		public override event EventHandler SelectionChanged;
 
 		public override bool IsActive {
-			get { return hexSelectionLayer.IsActive; }
-			set { hexSelectionLayer.IsActive = value; }
+			get => hexSelectionLayer.IsActive;
+			set => hexSelectionLayer.IsActive = value;
 		}
 
 		public override bool ActivationTracksFocus {
-			get { return activationTracksFocus; }
+			get => activationTracksFocus;
 			set {
 				if (activationTracksFocus == value)
 					return;
@@ -57,13 +57,11 @@ namespace dnSpy.Hex.Editor {
 		HexBufferPoint anchorPoint, activePoint;
 
 		public HexSelectionImpl(WpfHexView hexView, HexAdornmentLayer selectionLayer, VSTC.IEditorFormatMap editorFormatMap) {
-			if (hexView == null)
-				throw new ArgumentNullException(nameof(hexView));
 			if (selectionLayer == null)
 				throw new ArgumentNullException(nameof(selectionLayer));
 			if (editorFormatMap == null)
 				throw new ArgumentNullException(nameof(editorFormatMap));
-			HexView = hexView;
+			HexView = hexView ?? throw new ArgumentNullException(nameof(hexView));
 			HexView.GotAggregateFocus += HexView_GotAggregateFocus;
 			HexView.LostAggregateFocus += HexView_LostAggregateFocus;
 			hexSelectionLayer = new HexSelectionLayer(this, selectionLayer, editorFormatMap);

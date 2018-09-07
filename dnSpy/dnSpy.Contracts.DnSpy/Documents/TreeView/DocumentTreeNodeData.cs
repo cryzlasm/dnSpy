@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using dnlib.DotNet;
 using dnSpy.Contracts.Decompiler;
@@ -77,7 +78,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 		static class Cache {
 			static readonly TextClassifierTextColorWriter writer = new TextClassifierTextColorWriter();
 			public static TextClassifierTextColorWriter GetWriter() => writer;
-			public static void FreeWriter(TextClassifierTextColorWriter writer) { writer.Clear(); }
+			public static void FreeWriter(TextClassifierTextColorWriter writer) => writer.Clear();
 		}
 
 		/// <summary>
@@ -201,7 +202,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 		/// this value.
 		/// </summary>
 		public int FilterVersion {
-			get { return filterVersion; }
+			get => filterVersion;
 			set {
 				if (filterVersion != value) {
 					filterVersion = value;
@@ -307,7 +308,11 @@ namespace dnSpy.Contracts.Documents.TreeView {
 			Debug.Assert(b);
 			if (!b)
 				return;
-			DragDrop.DoDragDrop(dragSource, Copy(nodes), DragDropEffects.All);
+			try {
+				DragDrop.DoDragDrop(dragSource, Copy(nodes), DragDropEffects.All);
+			}
+			catch (COMException) {
+			}
 		}
 
 		/// <summary>
@@ -363,8 +368,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 		public static DsDocumentNode GetTopNode(this TreeNodeData self) {
 			var root = self == null ? null : self.TreeNode.TreeView.Root;
 			while (self != null) {
-				var found = self as DsDocumentNode;
-				if (found != null) {
+				if (self is DsDocumentNode found) {
 					var p = found.TreeNode.Parent;
 					if (p == null || p == root)
 						return found;

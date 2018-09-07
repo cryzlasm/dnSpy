@@ -1,5 +1,5 @@
 ﻿/*
-    Copyright (C) 2014-2016 de4dot@gmail.com
+    Copyright (C) 2014-2018 de4dot@gmail.com
 
     This file is part of dnSpy
 
@@ -83,9 +83,7 @@ namespace dnSpy.Documents.TreeView {
 		sealed class GuidObjectsProvider : IGuidObjectsProvider {
 			readonly ITreeView treeView;
 
-			public GuidObjectsProvider(ITreeView treeView) {
-				this.treeView = treeView;
-			}
+			public GuidObjectsProvider(ITreeView treeView) => this.treeView = treeView;
 
 			public IEnumerable<GuidObject> GetGuidObjects(GuidObjectsProviderArgs args) {
 				yield return new GuidObject(MenuConstants.GUIDOBJ_TREEVIEW_NODES_ARRAY_GUID, treeView.TopLevelSelection);
@@ -153,11 +151,11 @@ namespace dnSpy.Documents.TreeView {
 		}
 
 		readonly Dispatcher dispatcher;
-		internal void AddAction(Action action) {
+		internal void AddAction(Action callback) {
 			if (!dispatcher.HasShutdownFinished && !dispatcher.HasShutdownStarted) {
 				bool callInvoke;
 				lock (actionsToCall) {
-					actionsToCall.Add(action);
+					actionsToCall.Add(callback);
 					callInvoke = actionsToCall.Count == 1;
 				}
 				if (callInvoke) {
@@ -176,9 +174,9 @@ namespace dnSpy.Documents.TreeView {
 			decompilerService.DecompilerChanged -= DecompilerService_DecompilerChanged;
 			documentTreeViewSettings.PropertyChanged -= DocumentTreeViewSettings_PropertyChanged;
 			appSettings.PropertyChanged -= AppSettings_PropertyChanged;
+			TreeView.SelectItems(Array.Empty<TreeNodeData>());
 			DocumentService.Clear();
 			TreeView.Root.Children.Clear();
-			TreeView.SelectItems(Array.Empty<TreeNodeData>());
 			TreeView.Dispose();
 			context.Clear();
 		}
@@ -324,26 +322,25 @@ namespace dnSpy.Documents.TreeView {
 					dict[n] = i++;
 					dict2[n.Document] = n;
 				}
-				var list = new List<Tuple<DsDocumentNode, int>>(e.Documents.Select(a => {
-					DsDocumentNode node;
-					bool b = dict2.TryGetValue(a, out node);
+				var list = new List<(DsDocumentNode docNode, int index)>(e.Documents.Select(a => {
+					bool b = dict2.TryGetValue(a, out var node);
 					Debug.Assert(b);
 					int j = -1;
 					b = b && dict.TryGetValue(node, out j);
 					Debug.Assert(b);
-					return Tuple.Create(node, b ? j : -1);
+					return (node, (b ? j : -1));
 				}));
-				list.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+				list.Sort((a, b) => b.index.CompareTo(a.index));
 				var removed = new List<DsDocumentNode>();
 				foreach (var t in list) {
-					if (t.Item2 < 0)
+					if (t.index < 0)
 						continue;
-					Debug.Assert((uint)t.Item2 < (uint)TreeView.Root.Children.Count);
-					Debug.Assert(TreeView.Root.Children[t.Item2].Data == t.Item1);
-					TreeView.Root.Children.RemoveAt(t.Item2);
-					removed.Add(t.Item1);
+					Debug.Assert((uint)t.index < (uint)TreeView.Root.Children.Count);
+					Debug.Assert(TreeView.Root.Children[t.index].Data == t.docNode);
+					TreeView.Root.Children.RemoveAt(t.index);
+					removed.Add(t.docNode);
 				}
-				DisableMemoryMappedIO(list.Select(a => a.Item1).ToArray());
+				DisableMemoryMappedIO(list.Select(a => a.docNode).ToArray());
 				CallCollectionChanged(NotifyDocumentTreeViewCollectionChangedEventArgs.CreateRemove(removed.ToArray()));
 				break;
 
@@ -355,7 +352,7 @@ namespace dnSpy.Documents.TreeView {
 				break;
 
 			default:
-				Debug.Fail(string.Format("Unknown event type: {0}", e.Type));
+				Debug.Fail($"Unknown event type: {e.Type}");
 				break;
 			}
 		}
@@ -385,8 +382,7 @@ namespace dnSpy.Documents.TreeView {
 			if (e.Event == TreeViewListenerEvent.NodeCreated) {
 				Debug.Assert(context != null);
 				var node = (ITreeNode)e.Argument;
-				var d = node.Data as DocumentTreeNodeData;
-				if (d != null)
+				if (node.Data is DocumentTreeNodeData d)
 					d.Context = context;
 				return;
 			}
@@ -440,10 +436,11 @@ namespace dnSpy.Documents.TreeView {
 				return FindNode((PropertyDef)@ref);
 			if (@ref is EventDef)
 				return FindNode((EventDef)@ref);
+			if (@ref is ISourceVariable sv && sv.Variable is Parameter p && p.ParamDef is ParamDef pd)
+				return FindNode(pd.DeclaringMethod);
 			if (@ref is ParamDef)
 				return FindNode(((ParamDef)@ref).DeclaringMethod);
-			if (@ref is NamespaceRef) {
-				var nsRef = (NamespaceRef)@ref;
+			if (@ref is NamespaceRef nsRef) {
 				return FindNamespaceNode(nsRef.Module, nsRef.Namespace);
 			}
 
@@ -567,8 +564,7 @@ namespace dnSpy.Documents.TreeView {
 		}
 
 		public NamespaceNode FindNamespaceNode(IDsDocument module, string @namespace) {
-			var modNode = FindNode(module) as ModuleDocumentNode;
-			if (modNode != null)
+			if (FindNode(module) is ModuleDocumentNode modNode)
 				return modNode.FindNode(@namespace);
 			return null;
 		}
@@ -659,14 +655,12 @@ namespace dnSpy.Documents.TreeView {
 
 		public IEnumerable<ModuleDocumentNode> GetAllModuleNodes() {
 			foreach (var node in TopNodes) {
-				var modNode = node as ModuleDocumentNode;
-				if (modNode != null) {
+				if (node is ModuleDocumentNode modNode) {
 					yield return modNode;
 					continue;
 				}
 
-				var asmNode = node as AssemblyDocumentNode;
-				if (asmNode != null) {
+				if (node is AssemblyDocumentNode asmNode) {
 					asmNode.TreeNode.EnsureChildrenLoaded();
 					foreach (var c in asmNode.TreeNode.DataChildren) {
 						modNode = c as ModuleDocumentNode;
@@ -685,8 +679,7 @@ namespace dnSpy.Documents.TreeView {
 
 		IEnumerable<DsDocumentNode> GetAllCreatedDsDocumentNodes(IEnumerable<TreeNodeData> nodes) {
 			foreach (var n in nodes) {
-				var fn = n as DsDocumentNode;
-				if (fn != null) {
+				if (n is DsDocumentNode fn) {
 					yield return fn;
 					// Don't call fn.TreeNode.EnsureChildrenLoaded(), only return created nodes
 					foreach (var c in GetAllCreatedDsDocumentNodes(fn.TreeNode.DataChildren))
@@ -759,6 +752,18 @@ namespace dnSpy.Documents.TreeView {
 			filenames = filenames.Where(a => File.Exists(a) && !existingFiles.Contains(a)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(a => Path.GetFileNameWithoutExtension(a), StringComparer.CurrentCultureIgnoreCase).ToArray();
 			TreeNodeData newSelectedNode = null;
 			for (int i = 0, j = 0; i < filenames.Length; i++) {
+				// Resolve shortcuts
+				var directory = Path.GetDirectoryName(filenames[i]);
+				var file = Path.GetFileName(filenames[i]);
+
+				var shell = new Shell32.Shell();
+				var folder = shell.NameSpace(directory);
+				var folderItem = folder.ParseName(file);
+				if (folderItem != null && folderItem.IsLink) {
+					var link = (Shell32.ShellLinkObject)folderItem.GetLink;
+					filenames[i] = link.Path;
+				}
+
 				var document = DocumentService.TryCreateOnly(DsDocumentInfo.CreateDocument(filenames[i]));
 				if (document == null)
 					continue;
@@ -809,7 +814,7 @@ namespace dnSpy.Documents.TreeView {
 
 		DsDocumentNode[] GetNewSortedNodes() {
 			var origOrder = TopNodes.ToArray();
-			var documents = origOrder.Select((a, i) => Tuple.Create(a, i)).ToList();
+			var documents = origOrder.Select((a, i) => (a, i)).ToList();
 			documents.Sort(DsDocumentNodeComparer.Instance);
 			var sorted = documents.Select(a => a.Item1).ToArray();
 			if (Equals(sorted, origOrder))
@@ -848,16 +853,12 @@ namespace dnSpy.Documents.TreeView {
 			return true;
 		}
 
-		sealed class DsDocumentNodeComparer : IComparer<Tuple<DsDocumentNode, int>> {
+		sealed class DsDocumentNodeComparer : IComparer<(DsDocumentNode, int)> {
 			public static readonly DsDocumentNodeComparer Instance = new DsDocumentNodeComparer();
 
-			public int Compare(Tuple<DsDocumentNode, int> x, Tuple<DsDocumentNode, int> y) {
-				if (x == y)
+			public int Compare((DsDocumentNode, int) x, (DsDocumentNode, int) y) {
+				if (x.Equals(y))
 					return 0;
-				if (x == null)
-					return -1;
-				if (y == null)
-					return 1;
 				int c = GetIsAutoLoadedOrder(x.Item1.Document.IsAutoLoaded).CompareTo(GetIsAutoLoadedOrder(y.Item1.Document.IsAutoLoaded));
 				if (c != 0)
 					return c;
